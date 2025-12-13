@@ -1,0 +1,134 @@
+---
+description:
+globs: src/*
+alwaysApply: true
+---
+
+## Project Structure
+
+- Use App Router (app directory)
+- Organize by feature in the app directory: `app/[feature]/page.tsx`
+- Place shared components in `components/` directory
+- Keep utilities in `utils/` directory
+- Store types in `types/` directory or colocate with components
+- Store models in `models/` directory
+
+## File Naming Conventions
+
+- Use kebab-case for directories and component files: `user-profile/`, `blog-posts/`
+- Use lowercase for utility files: `helpers.ts`, `constants.ts`
+
+## TypeScript
+
+- Always use TypeScript over JavaScript
+- Define proper types for props, avoid `any`
+- Use interfaces for object shapes, types for unions/intersections
+
+## Component Patterns
+
+- Prefer Server Components by default (no 'use client' unless needed)
+- Add 'use client' only when using:
+  - useState, useEffect, or other React hooks
+  - Event listeners (onClick, onChange, etc.)
+  - Browser-only APIs
+  - Context providers
+- Keep Client Components small and leaf-level when possible
+- Use async/await in Server Components for data fetching
+
+## Data Fetching
+
+- Fetch data in Server Components using async/await
+- Use native fetch with Next.js automatic caching
+- Implement loading.tsx for loading states
+- Implement error.tsx for error boundaries
+- Use parallel data fetching with Promise.all when possible
+- Revalidate data with `revalidatePath` or `revalidateTag`
+
+## Routing
+
+- Use file-based routing in app directory
+- Dynamic routes: `[id]/page.tsx` or `[...slug]/page.tsx`
+- Route groups: `(auth)/login/page.tsx` for organization without URL segments
+- Implement proper metadata exports in page.tsx files
+
+## Styling
+
+- Prefer Tailwind CSS for styling
+- Use `cn()` utility (clsx + tailwind-merge) for conditional classes
+
+## Performance
+
+- Optimize images with next/image component
+- Use `priority` prop for above-the-fold images
+- Implement proper `loading="lazy"` for below-the-fold images
+- Use dynamic imports for heavy components: `const Component = dynamic(() => import('./Component'))`
+- Implement Suspense boundaries for streaming
+- Use Server Actions for mutations instead of API routes when possible
+
+## Server Actions
+
+- Define Server Actions with 'use server' directive
+- Place in separate files or at top of Server Components
+- Return serializable data only
+- Implement proper error handling and validation
+- Use `revalidatePath` or `revalidateTag` after mutations
+
+## State Management
+
+- Use React Server Components for server state
+- Use URL search params for shareable state
+- Use Context for client state that needs to be shared
+- Consider Zustand for complex client state
+- Avoid prop drilling with composition patterns
+
+## Forms
+
+- Use zod for validation schemas
+- Provide clear error messages and field-level errors
+
+## Security
+
+- Sanitize user inputs before displaying
+- Use CSRF protection for mutations
+- Implement proper authentication checks
+- Use Content Security Policy headers
+- Keep dependencies updated
+- Never expose API keys in client-side code
+
+## Accessibility
+
+- Use semantic HTML elements
+- Implement proper ARIA labels when needed
+- Ensure keyboard navigation works
+- Maintain proper heading hierarchy
+- Provide alt text for images
+- Test with screen readers
+- Ensure sufficient color contrast
+
+## Error Handling
+
+- Implement error.tsx for route-level error boundaries
+- Use try-catch in Server Actions and API routes
+- Provide user-friendly error messages
+- Log errors server-side for debugging
+- Implement global error boundary in root layout
+- Handle 404s with not-found.tsx
+
+## Code Quality
+
+- Use ESLint with Next.js config
+- Format with Prettier
+- Use absolute imports with @ alias: `@/components/Button`
+- Keep components small and focused (single responsibility)
+- Extract reusable logic into custom hooks
+- Document complex functions with JSDoc comments
+- Use meaningful variable and function names
+
+## Git Practices
+
+- Write clear, concise commit messages
+- Keep commits atomic and focused
+- Use conventional commits format
+- Review diffs before committing
+- Don't commit .env files or secrets
+- Keep package-lock.json or yarn.lock in version control

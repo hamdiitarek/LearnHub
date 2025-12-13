@@ -1,0 +1,3 @@
+# Video uploads directory
+This directory is used to store uploaded lesson videos.
+Files in this directory are served statically by Next.js.
