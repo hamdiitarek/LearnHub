@@ -1,0 +1,23 @@
+@startuml
+skinparam linetype ortho
+
+rectangle "Student" as Student
+rectangle "Instructor" as Instructor
+rectangle "Admin" as Admin
+rectangle "Payment Gateway" as Payment
+
+rectangle "LearnHub LMS" as System
+
+Student --> System : Register / Login\nEnroll / Learn / Quiz
+System --> Student : Courses / Progress / Results
+
+Instructor --> System : Course Data\nLessons / Quizzes
+System --> Instructor : Enrollment Stats\nFeedback
+
+Admin --> System : User & Content Management
+System --> Admin : Reports / Statistics
+
+Student --> Payment : Payment Info
+Payment --> System : Payment Confirmation
+
+@enduml

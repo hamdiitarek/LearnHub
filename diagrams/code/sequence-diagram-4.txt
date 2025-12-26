@@ -1,0 +1,35 @@
+@startuml
+autonumber
+skinparam linetype ortho
+
+actor Instructor
+
+participant "Instructor Dashboard" as UI
+participant "Course Controller" as CC
+participant "Course Service" as CS
+database "Database" as DB
+
+Instructor -> UI : Create Course
+UI -> CC : createCourse(courseData)
+
+CC -> DB : saveCourse(status=DRAFT)
+DB --> CC : course created
+CC --> UI : course draft created
+
+Instructor -> UI : Add Lessons
+UI -> CC : addLesson(courseId, lessonData)
+CC -> DB : saveLesson()
+DB --> CC : lesson saved
+
+Instructor -> UI : Publish Course
+UI -> CC : publishCourse(courseId)
+
+CC -> CS : validateCourse()
+CS --> CC : valid
+CC -> DB : updateStatus(PUBLISHED)
+DB --> CC : updated
+
+CC --> UI : course published
+UI --> Instructor : Confirmation
+
+@enduml

@@ -1,0 +1,15 @@
+@startuml
+skinparam linetype ortho
+
+[*] --> Draft : createCourse()
+
+Draft --> Draft : editCourse()
+Draft --> Published : publishCourse()
+
+Published --> Published : updateContent()
+Published --> Archived : archiveCourse()
+
+Archived --> Archived : viewOnly()
+Archived --> Draft : restoreCourse()
+
+@enduml

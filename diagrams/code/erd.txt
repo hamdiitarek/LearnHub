@@ -1,0 +1,150 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+' =========================
+' ENUMS (as reference)
+' =========================
+entity UserRole {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+}
+
+entity CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+entity CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+entity QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  MULTIPLE_SELECT
+}
+
+' =========================
+' CORE ENTITIES
+' =========================
+
+entity User {
+  +id : String <<PK>>
+  email : String
+  name : String
+  password : String
+  role : UserRole
+  avatar : String
+  bio : Text
+  createdAt : DateTime
+}
+
+entity Course {
+  +id : String <<PK>>
+  title : String
+  description : Text
+  price : Float
+  level : CourseLevel
+  status : CourseStatus
+  category : String
+  instructorId : String <<FK>>
+  createdAt : DateTime
+}
+
+entity Lesson {
+  +id : String <<PK>>
+  title : String
+  videoUrl : String
+  duration : Int
+  order : Int
+  isFree : Boolean
+  courseId : String <<FK>>
+}
+
+entity Enrollment {
+  +id : String <<PK>>
+  enrolledAt : DateTime
+  completedAt : DateTime
+  progress : Float
+  userId : String <<FK>>
+  courseId : String <<FK>>
+}
+
+entity Progress {
+  +id : String <<PK>>
+  watchTime : Int
+  completed : Boolean
+  completedAt : DateTime
+  userId : String <<FK>>
+  lessonId : String <<FK>>
+}
+
+entity Quiz {
+  +id : String <<PK>>
+  title : String
+  passingScore : Int
+  timeLimit : Int
+  lessonId : String <<FK>>
+}
+
+entity Question {
+  +id : String <<PK>>
+  text : Text
+  type : QuestionType
+  points : Int
+  quizId : String <<FK>>
+}
+
+entity QuizAttempt {
+  +id : String <<PK>>
+  score : Float
+  passed : Boolean
+  completedAt : DateTime
+  userId : String <<FK>>
+  quizId : String <<FK>>
+}
+
+entity Review {
+  +id : String <<PK>>
+  rating : Int
+  comment : Text
+  userId : String <<FK>>
+  courseId : String <<FK>>
+}
+
+entity Certificate {
+  +id : String <<PK>>
+  certificateNumber : String
+  issuedAt : DateTime
+  userId : String <<FK>>
+  courseId : String <<FK>>
+}
+
+' =========================
+' RELATIONSHIPS
+' =========================
+
+User ||--o{ Course : "creates"
+User ||--o{ Enrollment : "enrolls"
+User ||--o{ Progress : "tracks"
+User ||--o{ QuizAttempt : "attempts"
+User ||--o{ Review : "writes"
+User ||--o{ Certificate : "receives"
+
+Course ||--o{ Lesson : "contains"
+Course ||--o{ Enrollment : "has"
+Course ||--o{ Review : "receives"
+Course ||--o{ Certificate : "issues"
+
+Lesson ||--o{ Progress : "tracked by"
+Lesson ||--|| Quiz : "has"
+
+Quiz ||--o{ Question : "contains"
+Quiz ||--o{ QuizAttempt : "attempted in"
+
+@enduml

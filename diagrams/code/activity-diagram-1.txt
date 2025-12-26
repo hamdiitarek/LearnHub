@@ -1,0 +1,20 @@
+@startuml
+start
+
+:Browse Courses;
+:Select Course;
+
+if (Logged in?) then (Yes)
+  :Request Enrollment;
+else (No)
+  :Login;
+  :Request Enrollment;
+endif
+
+:Validate Enrollment;
+:Create Enrollment Record;
+:Grant Course Access;
+:Show Confirmation;
+
+stop
+@enduml

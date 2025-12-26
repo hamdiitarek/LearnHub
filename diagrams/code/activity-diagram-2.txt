@@ -1,0 +1,24 @@
+@startuml
+start
+
+:Create Course;
+:Set Course Details;
+:Save Course as Draft;
+
+repeat
+  :Add Lesson;
+repeat while (More lessons?) is (Yes)
+
+:Add Quiz;
+
+if (Course Valid?) then (Yes)
+  :Submit for Publishing;
+  :Publish Course;
+else (No)
+  :Edit Course;
+endif
+
+:Course Available to Students;
+
+stop
+@enduml

@@ -1,0 +1,154 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' =========================
+' ENUMS
+' =========================
+enum UserRole {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  MULTIPLE_SELECT
+}
+
+' =========================
+' BASE USER & INHERITANCE
+' =========================
+class User {
+  - id : String
+  - name : String
+  - email : String
+  - password : String
+  - role : UserRole
+  - createdAt : DateTime
+  + login()
+  + logout()
+}
+
+class Student
+class Instructor
+class Admin
+
+User <|-- Student
+User <|-- Instructor
+User <|-- Admin
+
+' =========================
+' COURSE & CONTENT
+' =========================
+class Course {
+  - id : String
+  - title : String
+  - description : String
+  - price : Float
+  - level : CourseLevel
+  - status : CourseStatus
+  + publish()
+  + archive()
+}
+
+class Lesson {
+  - id : String
+  - title : String
+  - videoUrl : String
+  - duration : Int
+  - order : Int
+  + play()
+}
+
+' =========================
+' ENROLLMENT & PROGRESS
+' =========================
+class Enrollment {
+  - enrolledAt : DateTime
+  - progress : Float
+  + updateProgress()
+}
+
+class Progress {
+  - watchTime : Int
+  - completed : Boolean
+  + markCompleted()
+}
+
+' =========================
+' QUIZ MODULE
+' =========================
+class Quiz {
+  - id : String
+  - passingScore : Int
+  + evaluate()
+}
+
+class Question {
+  - id : String
+  - text : String
+  - type : QuestionType
+  + validateAnswer()
+}
+
+class QuizAttempt {
+  - score : Float
+  - passed : Boolean
+  + submit()
+}
+
+' =========================
+' FEEDBACK & CERTIFICATION
+' =========================
+class Review {
+  - rating : Int
+  - comment : String
+  + submitReview()
+}
+
+class Certificate {
+  - certificateNumber : String
+  - issuedAt : DateTime
+  + generate()
+}
+
+' =========================
+' RELATIONSHIPS
+' =========================
+
+Instructor "1" -- "0..*" Course : creates
+Course "1" *-- "1..*" Lesson : contains
+
+Student "1" -- "0..*" Enrollment
+Course  "1" -- "0..*" Enrollment
+
+Student "1" -- "0..*" Progress
+Lesson  "1" -- "0..*" Progress
+
+Lesson "1" -- "0..1" Quiz
+Quiz "1" *-- "1..*" Question
+
+Student "1" -- "0..*" QuizAttempt
+Quiz "1" -- "0..*" QuizAttempt
+
+Student "1" -- "0..*" Review
+Course  "1" -- "0..*" Review
+
+Student "1" -- "0..*" Certificate
+Course  "1" -- "0..*" Certificate
+
+@enduml

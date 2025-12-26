@@ -1,0 +1,95 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+' =========================
+' Actors
+' =========================
+actor User
+actor Student
+actor Instructor
+actor Admin
+
+User <|-- Student
+User <|-- Instructor
+User <|-- Admin
+
+actor "Payment Gateway" as Payment
+
+' =========================
+' System Boundary
+' =========================
+rectangle "LearnHub E-Learning Platform" {
+
+  ' -------- Authentication --------
+  usecase "Register" as UC_Register
+  usecase "Login" as UC_Login
+
+  ' -------- Student Use Cases --------
+  usecase "Browse Courses" as UC_Browse
+  usecase "Enroll in Course" as UC_Enroll
+  usecase "Watch Lesson" as UC_Watch
+  usecase "Track Progress" as UC_Progress
+  usecase "Take Quiz" as UC_Quiz
+  usecase "Submit Review" as UC_Review
+  usecase "Download Certificate" as UC_Certificate
+  usecase "Complete Course" as UC_Complete
+
+  ' -------- Instructor Use Cases --------
+  usecase "Create Course" as UC_CreateCourse
+  usecase "Edit Course" as UC_EditCourse
+  usecase "Add Lessons" as UC_AddLessons
+  usecase "Create Quiz" as UC_CreateQuiz
+  usecase "Publish Course" as UC_Publish
+  usecase "View Enrollments" as UC_ViewEnrollments
+  usecase "View Revenue" as UC_Revenue
+
+  ' -------- Admin Use Cases --------
+  usecase "Manage Users" as UC_ManageUsers
+  usecase "Approve / Remove Course" as UC_Approve
+  usecase "View Platform Statistics" as UC_Stats
+  usecase "Moderate Reviews" as UC_Moderate
+}
+
+' =========================
+' Associations
+' =========================
+User -- UC_Register
+User -- UC_Login
+
+Student -- UC_Browse
+Student -- UC_Enroll
+Student -- UC_Watch
+Student -- UC_Progress
+Student -- UC_Quiz
+Student -- UC_Review
+Student -- UC_Certificate
+
+Instructor -- UC_CreateCourse
+Instructor -- UC_EditCourse
+Instructor -- UC_AddLessons
+Instructor -- UC_CreateQuiz
+Instructor -- UC_Publish
+Instructor -- UC_ViewEnrollments
+Instructor -- UC_Revenue
+
+Admin -- UC_ManageUsers
+Admin -- UC_Approve
+Admin -- UC_Stats
+Admin -- UC_Moderate
+
+Payment -- UC_Enroll
+
+' =========================
+' Include Relationships
+' =========================
+UC_Enroll --> UC_Login : <<include>>
+UC_Watch --> UC_Enroll : <<include>>
+UC_Quiz --> UC_Watch : <<include>>
+UC_Publish --> UC_EditCourse : <<include>>
+
+' =========================
+' Extend Relationships
+' =========================
+UC_Certificate --> UC_Complete : <<extend>>
+@enduml

@@ -1,0 +1,30 @@
+@startuml
+skinparam linetype ortho
+
+rectangle Student
+
+process "3.1 Validate User" as P31
+process "3.2 Check Course" as P32
+process "3.3 Create Enrollment" as P33
+process "3.4 Track Progress" as P34
+
+database "User DB" as D1
+database "Course DB" as D2
+database "Enrollment DB" as D3
+database "Progress DB" as D4
+
+Student --> P31 : Enrollment Request
+P31 --> D1 : Verify User
+D1 --> P31 : User Valid
+
+P31 --> P32
+P32 --> D2 : Course Info
+D2 --> P32 : Availability
+
+P32 --> P33
+P33 --> D3 : Save Enrollment
+
+Student --> P34 : Watch Lesson
+P34 --> D4 : Progress Data
+
+@enduml

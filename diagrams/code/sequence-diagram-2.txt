@@ -1,0 +1,27 @@
+@startuml
+autonumber
+skinparam linetype ortho
+
+actor Student
+
+participant "Lesson Page" as UI
+participant "Progress Controller" as PC
+participant "Lesson Service" as LS
+database "Database" as DB
+
+Student -> UI : Open Lesson
+UI -> LS : getLesson(lessonId)
+LS -> DB : fetchLesson(lessonId)
+DB --> LS : lesson data
+LS --> UI : lesson details
+
+Student -> UI : Play Video
+UI -> PC : updateProgress(studentId, lessonId, watchTime)
+
+PC -> DB : saveProgress()
+DB --> PC : progress saved
+
+PC --> UI : progress updated
+UI --> Student : Continue watching
+
+@enduml

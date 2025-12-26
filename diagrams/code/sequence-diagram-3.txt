@@ -1,0 +1,35 @@
+@startuml
+autonumber
+skinparam linetype ortho
+
+actor Student
+
+participant "Quiz Page" as UI
+participant "Quiz Controller" as QC
+participant "Quiz Service" as QS
+database "Database" as DB
+
+Student -> UI : Start Quiz
+UI -> QS : getQuiz(lessonId)
+QS -> DB : fetchQuiz()
+DB --> QS : quiz + questions
+QS --> UI : quiz data
+
+Student -> UI : Submit Answers
+UI -> QC : submitQuiz(studentId, quizId, answers)
+
+QC -> QS : evaluateAnswers()
+QS -> DB : storeAttempt()
+DB --> QS : saved
+
+alt Passed
+    QS --> QC : passed
+    QC --> UI : show success
+else Failed
+    QS --> QC : failed
+    QC --> UI : show retry option
+end
+
+UI --> Student : Display result
+
+@enduml

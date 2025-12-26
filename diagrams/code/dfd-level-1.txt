@@ -1,0 +1,39 @@
+@startuml
+skinparam linetype ortho
+
+rectangle Student
+rectangle Instructor
+rectangle Admin
+
+process "1. User Management" as P1
+process "2. Course Management" as P2
+process "3. Enrollment & Learning" as P3
+process "4. Quiz & Evaluation" as P4
+process "5. Review & Certification" as P5
+
+database "User DB" as D1
+database "Course DB" as D2
+database "Enrollment DB" as D3
+database "Quiz DB" as D4
+database "Review DB" as D5
+
+Student --> P1 : Register / Login
+P1 --> D1 : User Data
+
+Instructor --> P2 : Course Info
+P2 --> D2 : Course Data
+
+Student --> P3 : Enrollment Request
+P3 --> D3 : Enrollment Data
+P3 --> D2 : Course Access
+
+Student --> P4 : Quiz Answers
+P4 --> D4 : Attempts & Scores
+
+Student --> P5 : Reviews
+P5 --> D5 : Ratings / Certificates
+
+Admin --> P1 : Manage Users
+Admin --> P2 : Moderate Content
+
+@enduml

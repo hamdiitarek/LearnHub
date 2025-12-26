@@ -1,0 +1,39 @@
+@startuml
+autonumber
+skinparam linetype ortho
+
+actor Student
+
+participant "Course Page" as UI
+participant "Enrollment Controller" as EC
+participant "Auth Service" as Auth
+participant "Course Service" as CS
+database "Database" as DB
+
+Student -> UI : Click "Enroll"
+UI -> Auth : checkLogin()
+
+alt Student not logged in
+    Auth --> UI : not authenticated
+    UI -> Student : Redirect to Login
+else Student logged in
+    Auth --> UI : authenticated
+
+    UI -> EC : enroll(studentId, courseId)
+
+    EC -> CS : validateCourse(courseId)
+    CS -> DB : getCourse(courseId)
+    DB --> CS : course details
+    CS --> EC : course valid
+
+    EC -> DB : checkEnrollment(studentId, courseId)
+    DB --> EC : not enrolled
+
+    EC -> DB : createEnrollment(studentId, courseId)
+    DB --> EC : enrollment created
+
+    EC --> UI : enrollment success
+    UI --> Student : Show confirmation
+end
+
+@enduml
