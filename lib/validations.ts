@@ -33,6 +33,9 @@ export const updateProfileSchema = z.object({
   avatar: z.string().url("Invalid avatar URL").optional().nullable(),
 });
 
+// IDs are only checked for presence: routes look every ID up and return 404
+// when it doesn't exist. (The demo data uses readable IDs, not CUIDs.)
+
 // ==================== COURSE SCHEMAS ====================
 
 export const createCourseSchema = z.object({
@@ -53,13 +56,13 @@ export const createCourseSchema = z.object({
 export const updateCourseSchema = createCourseSchema.partial();
 
 export const publishCourseSchema = z.object({
-  courseId: z.string().cuid("Invalid course ID"),
+  courseId: z.string().min(1, "Course ID is required"),
 });
 
 // ==================== LESSON SCHEMAS ====================
 
 export const createLessonSchema = z.object({
-  courseId: z.string().cuid("Invalid course ID"),
+  courseId: z.string().min(1, "Course ID is required"),
   title: z
     .string()
     .min(3, "Title must be at least 3 characters")
@@ -74,10 +77,10 @@ export const createLessonSchema = z.object({
 export const updateLessonSchema = createLessonSchema.partial().omit({ courseId: true });
 
 export const reorderLessonsSchema = z.object({
-  courseId: z.string().cuid("Invalid course ID"),
+  courseId: z.string().min(1, "Course ID is required"),
   lessons: z.array(
     z.object({
-      id: z.string().cuid("Invalid lesson ID"),
+      id: z.string().min(1, "Lesson ID is required"),
       order: z.number().int().min(0),
     })
   ),
@@ -86,7 +89,7 @@ export const reorderLessonsSchema = z.object({
 // ==================== ENROLLMENT SCHEMAS ====================
 
 export const enrollmentSchema = z.object({
-  courseId: z.string().cuid("Invalid course ID"),
+  courseId: z.string().min(1, "Course ID is required"),
 });
 
 // ==================== PROGRESS SCHEMAS ====================
@@ -100,7 +103,7 @@ export const updateProgressSchema = z.object({
 // ==================== QUIZ SCHEMAS ====================
 
 export const createQuizSchema = z.object({
-  lessonId: z.string().cuid("Invalid lesson ID"),
+  lessonId: z.string().min(1, "Lesson ID is required"),
   title: z
     .string()
     .min(3, "Title must be at least 3 characters")
@@ -113,7 +116,7 @@ export const createQuizSchema = z.object({
 export const updateQuizSchema = createQuizSchema.partial().omit({ lessonId: true });
 
 export const createQuestionSchema = z.object({
-  quizId: z.string().cuid("Invalid quiz ID"),
+  quizId: z.string().min(1, "Quiz ID is required"),
   text: z.string().min(5, "Question text must be at least 5 characters"),
   type: z.enum(["MULTIPLE_CHOICE", "TRUE_FALSE", "MULTIPLE_SELECT"]).default("MULTIPLE_CHOICE"),
   options: z.array(z.string()).min(2, "At least 2 options required"),
@@ -125,14 +128,14 @@ export const createQuestionSchema = z.object({
 export const updateQuestionSchema = createQuestionSchema.partial().omit({ quizId: true });
 
 export const submitQuizSchema = z.object({
-  quizId: z.string().cuid("Invalid quiz ID"),
+  quizId: z.string().min(1, "Quiz ID is required"),
   answers: z.record(z.string(), z.union([z.string(), z.array(z.string()), z.boolean()])),
 });
 
 // ==================== REVIEW SCHEMAS ====================
 
 export const createReviewSchema = z.object({
-  courseId: z.string().cuid("Invalid course ID"),
+  courseId: z.string().min(1, "Course ID is required"),
   rating: z.number().int().min(1, "Rating must be at least 1").max(5, "Rating must be at most 5"),
   comment: z.string().max(1000, "Comment must be less than 1000 characters").optional(),
 });
