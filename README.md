@@ -37,7 +37,15 @@ Every demo account uses the password `learnhub-demo`.
 
 ## Demo mode
 
-When `DATABASE_URL` is **not** set, the app runs an in-process PostgreSQL ([PGlite](https://pglite.dev)) through the Prisma driver adapter, creates the schema and seeds it on first request. Nothing to install and no environment variables needed. Changes last until the server restarts.
+One flag in `.env` switches between the demo and a live site:
+
+| `DEMO_MODE` | What runs |
+|-------------|-----------|
+| `true` | The demo: an in-process PostgreSQL ([PGlite](https://pglite.dev)) through the Prisma driver adapter, with the schema created and seeded on first request, plus one-click demo accounts. `DATABASE_URL` is ignored. |
+| `false` | Live: your PostgreSQL at `DATABASE_URL`. No seed data, no demo accounts or demo links. |
+| not set | The demo when there is no `DATABASE_URL`, live when there is one. |
+
+In the demo, changes last until the server restarts.
 
 The seed (`lib/demo/seed.ts`, deterministic so every start looks the same) contains:
 
@@ -68,21 +76,21 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). With no `.env`, you're in demo mode.
+Open [http://localhost:3000](http://localhost:3000). With no `.env` (or `DEMO_MODE=true`), you're in the demo.
 
 ### With your own PostgreSQL
 
 ```bash
-cp .env.example .env    # set DATABASE_URL and a long random NEXTAUTH_SECRET
+cp .env.example .env    # set DEMO_MODE=false, DATABASE_URL and a long random NEXTAUTH_SECRET
 npx prisma db push
 npm run dev
 ```
 
-Setting `DATABASE_URL` turns demo mode off: no seed data and no demo buttons.
+With `DEMO_MODE=false` there is no seed data and no demo buttons.
 
 ## Deployment
 
-On Vercel, import the repository and deploy. Without environment variables it serves the demo. For a real deployment, set `DATABASE_URL` and `AUTH_SECRET` (or `NEXTAUTH_SECRET`).
+On Vercel, import the repository and set `DEMO_MODE`. With `DEMO_MODE=true` it serves the demo and needs nothing else. For a live site, set `DEMO_MODE=false`, `DATABASE_URL` and `AUTH_SECRET` (or `NEXTAUTH_SECRET`).
 
 ## Project structure
 

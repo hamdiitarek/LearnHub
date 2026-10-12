@@ -5,13 +5,14 @@ import { PrismaPGlite } from "pglite-prisma-adapter";
 import { Pool } from "pg";
 import { SCHEMA_SQL } from "@/lib/demo/schema";
 import { seedDemo } from "@/lib/demo/seed";
+import { isDemo } from "@/lib/demo/mode";
 
 /**
- * Without DATABASE_URL, LearnHub runs as a self-contained demo: Postgres runs
+ * In demo mode (see lib/demo/mode.ts) LearnHub is self-contained: Postgres runs
  * in-process (PGlite) and is seeded with the demo catalogue on first use.
  * Changes last until the server restarts.
  */
-export const isDemo = !process.env.DATABASE_URL;
+export { isDemo };
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -19,6 +20,11 @@ const globalForPrisma = globalThis as unknown as {
 
 function createClient(): PrismaClient {
   if (!isDemo) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error(
+        "DATABASE_URL is required when DEMO_MODE=false. Set it, or set DEMO_MODE=true for the demo.",
+      );
+    }
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     return new PrismaClient({ adapter: new PrismaPg(pool) });
   }

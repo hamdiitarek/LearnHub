@@ -7,6 +7,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { db } from "@/lib/db";
+import { isDemo } from "@/lib/demo/mode";
 import {
   CourseCard,
   type CourseSummary,
@@ -187,14 +188,16 @@ export default async function HomePage() {
               Browse courses <ArrowRight className="size-4 rtl:rotate-180" />
             </Link>
             <Link
-              href="/login?demo=student"
+              href={isDemo ? "/login?demo=student" : "/register"}
               className="rounded-full border border-ink/20 px-6 py-3.5 text-[15px] font-semibold transition hover:border-ink/50"
             >
-              Try the student demo
+              {isDemo ? "Try the student demo" : "Create a free account"}
             </Link>
           </div>
           <p data-hero-fade className="mt-4 text-[13px] text-muted-foreground">
-            The demo signs you in with one click. No account needed.
+            {isDemo
+              ? "The demo signs you in with one click. No account needed."
+              : "Free to join. Your progress is saved on every lesson."}
           </p>
         </div>
 
@@ -377,40 +380,42 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ------------------------------------------------------------ demo */}
-      <section className="mx-auto max-w-6xl px-5 py-20">
-        <h2
-          data-split
-          className="max-w-2xl font-display text-[clamp(2.2rem,4.5vw,3.4rem)] leading-[1.02]"
-        >
-          Look around as <span className="mark">anyone.</span>
-        </h2>
-        <p className="mt-4 max-w-xl text-[16px] text-muted-foreground">
-          This is a live demo with its own database. Sign in as any role with
-          one click; changes stay until the server restarts.
-        </p>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {DEMOS.map((d) => (
-            <Link
-              key={d.role}
-              href={`/login?demo=${d.role}`}
-              data-reveal
-              className="group flex flex-col rounded-2xl border border-border bg-card p-6 transition hover:border-forest"
-            >
-              <span className="w-fit rounded-full bg-secondary px-3 py-1 text-[12px] font-semibold">
-                {d.title}
-              </span>
-              <p className="mt-4 flex-1 text-[15px] leading-relaxed text-ink/75">
-                {d.body}
-              </p>
-              <span className="mt-6 inline-flex items-center gap-1.5 text-[14px] font-semibold text-forest">
-                Sign in as {d.title.toLowerCase()}{" "}
-                <ArrowRight className="size-4 transition group-hover:translate-x-0.5 rtl:rotate-180" />
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* ------------------------------------------------------------ demo (DEMO_MODE only) */}
+      {isDemo && (
+        <section className="mx-auto max-w-6xl px-5 py-20">
+          <h2
+            data-split
+            className="max-w-2xl font-display text-[clamp(2.2rem,4.5vw,3.4rem)] leading-[1.02]"
+          >
+            Look around as <span className="mark">anyone.</span>
+          </h2>
+          <p className="mt-4 max-w-xl text-[16px] text-muted-foreground">
+            This is a live demo with its own database. Sign in as any role with
+            one click; changes stay until the server restarts.
+          </p>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {DEMOS.map((d) => (
+              <Link
+                key={d.role}
+                href={`/login?demo=${d.role}`}
+                data-reveal
+                className="group flex flex-col rounded-2xl border border-border bg-card p-6 transition hover:border-forest"
+              >
+                <span className="w-fit rounded-full bg-secondary px-3 py-1 text-[12px] font-semibold">
+                  {d.title}
+                </span>
+                <p className="mt-4 flex-1 text-[15px] leading-relaxed text-ink/75">
+                  {d.body}
+                </p>
+                <span className="mt-6 inline-flex items-center gap-1.5 text-[14px] font-semibold text-forest">
+                  Sign in as {d.title.toLowerCase()}{" "}
+                  <ArrowRight className="size-4 transition group-hover:translate-x-0.5 rtl:rotate-180" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </PageMotion>
   );
 }

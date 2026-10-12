@@ -1,15 +1,15 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { isDemo } from "@/lib/demo/mode";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Sign in" };
 
 export default function LoginPage() {
-  // Without DATABASE_URL the app runs on its seeded demo database.
-  const demo = !process.env.DATABASE_URL;
+  // Demo accounts and one-click sign-in only exist in demo mode (DEMO_MODE).
   return (
     <Suspense>
-      <LoginForm demo={demo} />
+      <LoginForm demo={isDemo} />
     </Suspense>
   );
 }

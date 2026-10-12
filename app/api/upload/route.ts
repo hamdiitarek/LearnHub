@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { isDemo } from "@/lib/db";
+import { isDemo } from "@/lib/demo/mode";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { v4 as uuidv4 } from "uuid";
@@ -22,8 +22,11 @@ export async function POST(request: NextRequest) {
     // The public demo runs on a read-only filesystem.
     if (isDemo) {
       return NextResponse.json(
-        { error: "Uploads are turned off in the public demo. Paste a YouTube link instead." },
-        { status: 400 }
+        {
+          error:
+            "Uploads are turned off in the public demo. Paste a YouTube link instead.",
+        },
+        { status: 400 },
       );
     }
 
@@ -35,11 +38,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = ["video/mp4", "video/webm", "video/ogg", "video/quicktime"];
+    const allowedTypes = [
+      "video/mp4",
+      "video/webm",
+      "video/ogg",
+      "video/quicktime",
+    ];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
         { error: "Invalid file type. Allowed: MP4, WebM, OGG, MOV" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -48,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (file.size > maxSize) {
       return NextResponse.json(
         { error: "File too large. Maximum size is 500MB" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -69,18 +77,18 @@ export async function POST(request: NextRequest) {
     // Return the public URL
     const videoUrl = `/uploads/videos/${filename}`;
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       videoUrl,
       filename,
       size: file.size,
-      type: file.type 
+      type: file.type,
     });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(
       { error: "Failed to upload file" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
