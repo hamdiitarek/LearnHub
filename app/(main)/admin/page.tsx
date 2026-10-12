@@ -457,7 +457,17 @@ function Overview({ data }: { data: StatsResponse }) {
                   key={w.weekStart}
                   className="group relative flex h-full flex-1 flex-col justify-end"
                 >
-                  <span className="pointer-events-none absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full rounded-md bg-ink px-2 py-1 text-[11.5px] whitespace-nowrap text-paper opacity-0 transition group-hover:opacity-100">
+                  <span
+                    className={cn(
+                      "pointer-events-none absolute -top-1 -translate-y-full rounded-md bg-ink px-2 py-1 text-[11.5px] whitespace-nowrap text-paper opacity-0 transition group-hover:opacity-100",
+                      // Keep the labels of the edge bars inside the card.
+                      i < 2
+                        ? "start-0"
+                        : i > enrollmentsByWeek.length - 3
+                          ? "end-0"
+                          : "left-1/2 -translate-x-1/2",
+                    )}
+                  >
                     {plural(w.enrollments, "enrolment")} · w/c{" "}
                     {fmtShort(w.weekStart)}
                   </span>

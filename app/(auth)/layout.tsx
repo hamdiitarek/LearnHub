@@ -6,7 +6,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1fr_1.1fr]">
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <aside className="relative hidden overflow-hidden bg-ink p-12 text-paper lg:flex lg:flex-col">
         <div className="[&_span]:text-paper">
           <Logo />
@@ -27,7 +27,7 @@ export default function AuthLayout({
           }}
         />
       </aside>
-      <main className="flex flex-col px-5 py-8 sm:px-10">
+      <main className="flex min-w-0 flex-col px-5 py-8 sm:px-10">
         <div className="lg:hidden">
           <Logo />
         </div>

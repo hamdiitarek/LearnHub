@@ -152,7 +152,7 @@ export default async function HomePage() {
   return (
     <PageMotion>
       {/* ------------------------------------------------------------ hero */}
-      <section className="mx-auto grid max-w-6xl items-center gap-14 px-5 pt-14 pb-20 lg:grid-cols-[1.1fr_1fr] lg:pt-20">
+      <section className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-5 pt-14 pb-20 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:pt-20">
         <div>
           <p
             data-hero-fade
