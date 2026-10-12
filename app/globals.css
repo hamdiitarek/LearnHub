@@ -144,7 +144,8 @@
 }
 
 /* GSAP intros: these stay hidden until components/motion/page-motion.tsx animates
-   them in. The class comes from an inline script, so without JS nothing hides. */
+   them in. The class comes from an inline script, so without JS nothing hides,
+   and if the script is slow or fails they appear on their own after 2.5s. */
 @media (prefers-reduced-motion: no-preference) {
   .motion [data-hero-title],
   .motion [data-hero-fade],
@@ -152,6 +153,13 @@
   .motion [data-hero-card],
   .motion [data-cert] {
     visibility: hidden;
+    animation: motion-fallback 0s linear 2.5s forwards;
+  }
+}
+
+@keyframes motion-fallback {
+  to {
+    visibility: visible;
   }
 }
 
