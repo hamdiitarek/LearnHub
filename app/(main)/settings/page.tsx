@@ -114,7 +114,7 @@ export default function SettingsPage() {
 
       setUser((prev) => (prev ? { ...prev, ...data.user } : null));
       setProfileSuccess("Profile updated successfully!");
-      
+
       // Update session
       await update({ name: profileForm.name });
     } catch (err) {
@@ -164,7 +164,9 @@ export default function SettingsPage() {
         confirmPassword: "",
       });
     } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : "An error occurred");
+      setPasswordError(
+        err instanceof Error ? err.message : "An error occurred",
+      );
     } finally {
       setIsSavingPassword(false);
     }
@@ -174,8 +176,8 @@ export default function SettingsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/4" />
-          <div className="h-96 bg-gray-200 rounded" />
+          <div className="h-8 w-1/4 rounded bg-gray-200" />
+          <div className="h-96 rounded bg-gray-200" />
         </div>
       </div>
     );
@@ -186,12 +188,12 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <h1 className="text-3xl font-bold mb-2">Settings</h1>
-      <p className="text-gray-600 mb-8">Manage your account settings</p>
+    <div className="container mx-auto max-w-3xl px-4 py-8">
+      <h1 className="mb-2 text-3xl font-bold">Settings</h1>
+      <p className="mb-8 text-gray-600">Manage your account settings</p>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b mb-6">
+      <div className="mb-6 flex gap-4 border-b">
         {[
           { key: "profile", label: "Profile" },
           { key: "password", label: "Password" },
@@ -199,9 +201,9 @@ export default function SettingsPage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as typeof activeTab)}
-            className={`pb-2 px-1 font-medium ${
+            className={`px-1 pb-2 font-medium ${
               activeTab === tab.key
-                ? "border-b-2 border-blue-600 text-blue-600"
+                ? "border-b-2 border-forest text-forest"
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -219,12 +221,12 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             {profileError && (
-              <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm mb-4">
+              <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-500">
                 {profileError}
               </div>
             )}
             {profileSuccess && (
-              <div className="bg-green-50 text-green-500 p-3 rounded-md text-sm mb-4">
+              <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-500">
                 {profileSuccess}
               </div>
             )}
@@ -232,22 +234,24 @@ export default function SettingsPage() {
             <form onSubmit={handleProfileUpdate} className="space-y-6">
               {/* Avatar Preview */}
               <div className="flex items-center gap-6">
-                <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-accent">
                   {profileForm.avatar ? (
                     <img
                       src={profileForm.avatar}
                       alt={profileForm.name}
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span className="text-blue-600 text-2xl font-bold">
+                    <span className="text-2xl font-bold text-forest">
                       {profileForm.name?.charAt(0)?.toUpperCase() || "?"}
                     </span>
                   )}
                 </div>
                 <div>
                   <p className="font-medium">{user.email}</p>
-                  <p className="text-sm text-gray-500 capitalize">{user.role.toLowerCase()}</p>
+                  <p className="text-sm text-gray-500 capitalize">
+                    {user.role.toLowerCase()}
+                  </p>
                   <p className="text-sm text-gray-500">
                     Member since {new Date(user.createdAt).toLocaleDateString()}
                   </p>
@@ -299,9 +303,9 @@ export default function SettingsPage() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+              <div className="grid grid-cols-2 gap-4 border-t pt-4 md:grid-cols-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-forest">
                     {user._count.enrollments}
                   </p>
                   <p className="text-sm text-gray-500">Enrollments</p>
@@ -345,12 +349,12 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             {passwordError && (
-              <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm mb-4">
+              <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-500">
                 {passwordError}
               </div>
             )}
             {passwordSuccess && (
-              <div className="bg-green-50 text-green-500 p-3 rounded-md text-sm mb-4">
+              <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-500">
                 {passwordSuccess}
               </div>
             )}

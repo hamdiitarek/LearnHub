@@ -61,14 +61,16 @@ export default function EditCoursePage({
   const resolvedParams = use(params);
   const { data: session, status } = useSession();
   const router = useRouter();
-  
+
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [activeTab, setActiveTab] = useState<"details" | "lessons" | "quizzes">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "lessons" | "quizzes">(
+    "details",
+  );
 
   // Lesson form state
   const [showLessonForm, setShowLessonForm] = useState(false);
@@ -87,7 +89,9 @@ export default function EditCoursePage({
 
   // Quiz form state
   const [showQuizForm, setShowQuizForm] = useState(false);
-  const [selectedLessonForQuiz, setSelectedLessonForQuiz] = useState<string | null>(null);
+  const [selectedLessonForQuiz, setSelectedLessonForQuiz] = useState<
+    string | null
+  >(null);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
 
@@ -111,19 +115,22 @@ export default function EditCoursePage({
         return;
       }
       const data = await response.json();
-      
+
       // API returns course data directly, not nested under .course
       if (data.error) {
         router.push("/instructor");
         return;
       }
-      
+
       // Check if user owns this course
-      if (data.instructor?.id !== session?.user?.id && session?.user?.role !== "ADMIN") {
+      if (
+        data.instructor?.id !== session?.user?.id &&
+        session?.user?.role !== "ADMIN"
+      ) {
         router.push("/instructor");
         return;
       }
-      
+
       setCourse(data);
     } catch (error) {
       console.error("Failed to fetch course:", error);
@@ -190,7 +197,7 @@ export default function EditCoursePage({
       setSuccess(
         course.status === "PUBLISHED"
           ? "Course unpublished!"
-          : "Course published successfully!"
+          : "Course published successfully!",
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -238,7 +245,7 @@ export default function EditCoursePage({
       await fetchCourse();
       resetLessonForm();
       setSuccess(
-        editingLesson ? "Lesson updated!" : "Lesson added successfully!"
+        editingLesson ? "Lesson updated!" : "Lesson added successfully!",
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -252,7 +259,7 @@ export default function EditCoursePage({
     try {
       const response = await fetch(
         `/api/courses/${course.id}/lessons/${lessonId}`,
-        { method: "DELETE" }
+        { method: "DELETE" },
       );
 
       if (!response.ok) {
@@ -352,8 +359,8 @@ export default function EditCoursePage({
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/4" />
-          <div className="h-96 bg-gray-200 rounded" />
+          <div className="h-8 w-1/4 rounded bg-gray-200" />
+          <div className="h-96 rounded bg-gray-200" />
         </div>
       </div>
     );
@@ -365,14 +372,14 @@ export default function EditCoursePage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex items-center justify-between">
         <div>
           <Link
             href="/instructor"
-            className="text-sm text-blue-600 hover:underline flex items-center gap-1 mb-2"
+            className="mb-2 flex items-center gap-1 text-sm text-forest hover:underline"
           >
             <svg
-              className="w-4 h-4"
+              className="h-4 w-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -387,7 +394,7 @@ export default function EditCoursePage({
             Back to Dashboard
           </Link>
           <h1 className="text-3xl font-bold">{course.title}</h1>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="mt-2 flex items-center gap-2">
             <Badge
               className={
                 course.status === "PUBLISHED"
@@ -414,32 +421,32 @@ export default function EditCoursePage({
             {isPublishing
               ? "..."
               : course.status === "PUBLISHED"
-              ? "Unpublish"
-              : "Publish"}
+                ? "Unpublish"
+                : "Publish"}
           </Button>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm mb-4">
+        <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-500">
           {error}
         </div>
       )}
       {success && (
-        <div className="bg-green-50 text-green-500 p-3 rounded-md text-sm mb-4">
+        <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-500">
           {success}
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b mb-6">
+      <div className="mb-6 flex gap-4 border-b">
         {["details", "lessons", "quizzes"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as typeof activeTab)}
-            className={`pb-2 px-1 font-medium capitalize ${
+            className={`px-1 pb-2 font-medium capitalize ${
               activeTab === tab
-                ? "border-b-2 border-blue-600 text-blue-600"
+                ? "border-b-2 border-forest text-forest"
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -482,7 +489,7 @@ export default function EditCoursePage({
                 />
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
                   <select
@@ -491,7 +498,7 @@ export default function EditCoursePage({
                     onChange={(e) =>
                       setCourse({ ...course, category: e.target.value })
                     }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     {categories.map((cat) => (
                       <option key={cat} value={cat}>
@@ -509,7 +516,7 @@ export default function EditCoursePage({
                     onChange={(e) =>
                       setCourse({ ...course, level: e.target.value })
                     }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     {levels.map((lvl) => (
                       <option key={lvl.value} value={lvl.value}>
@@ -529,7 +536,10 @@ export default function EditCoursePage({
                   step="0.01"
                   value={course.price}
                   onChange={(e) =>
-                    setCourse({ ...course, price: parseFloat(e.target.value) || 0 })
+                    setCourse({
+                      ...course,
+                      price: parseFloat(e.target.value) || 0,
+                    })
                   }
                 />
               </div>
@@ -558,11 +568,11 @@ export default function EditCoursePage({
       {/* Lessons Tab */}
       {activeTab === "lessons" && (
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">Course Lessons</h2>
             <Button onClick={() => setShowLessonForm(true)}>
               <svg
-                className="w-4 h-4 mr-2"
+                className="mr-2 h-4 w-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -621,23 +631,41 @@ export default function EditCoursePage({
                       type="url"
                       placeholder="https://www.youtube.com/watch?v=…"
                       value={lessonForm.videoUrl}
-                      onChange={(e) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })}
+                      onChange={(e) =>
+                        setLessonForm({
+                          ...lessonForm,
+                          videoUrl: e.target.value,
+                        })
+                      }
                     />
                     <p className="text-xs text-muted-foreground">
-                      Paste a YouTube link (it plays inside the lesson), or upload a file below.
+                      Paste a YouTube link (it plays inside the lesson), or
+                      upload a file below.
                     </p>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="videoFile">Or upload a video file</Label>
-                    <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                    <div className="rounded-lg border-2 border-dashed p-4 text-center">
                       {videoFile ? (
                         <div className="space-y-2">
                           <div className="flex items-center justify-center gap-2">
-                            <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            <svg
+                              className="h-8 w-8 text-green-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
                             </svg>
-                            <span className="font-medium">{videoFile.name}</span>
+                            <span className="font-medium">
+                              {videoFile.name}
+                            </span>
                           </div>
                           <p className="text-sm text-gray-500">
                             {(videoFile.size / (1024 * 1024)).toFixed(2)} MB
@@ -652,7 +680,7 @@ export default function EditCoursePage({
                           </Button>
                         </div>
                       ) : (
-                        <label className="cursor-pointer block">
+                        <label className="block cursor-pointer">
                           <input
                             type="file"
                             id="videoFile"
@@ -664,38 +692,55 @@ export default function EditCoursePage({
                             className="hidden"
                           />
                           <div className="space-y-2">
-                            <svg className="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            <svg
+                              className="mx-auto h-12 w-12 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                              />
                             </svg>
-                            <p className="text-gray-600">Click to upload video</p>
-                            <p className="text-sm text-gray-400">MP4, WebM, OGG, MOV up to 500MB</p>
+                            <p className="text-gray-600">
+                              Click to upload video
+                            </p>
+                            <p className="text-sm text-gray-400">
+                              MP4, WebM, OGG, MOV up to 500MB
+                            </p>
                           </div>
                         </label>
                       )}
                     </div>
                     {isUploading && (
                       <div className="space-y-1">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="h-2 w-full rounded-full bg-gray-200">
                           <div
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            className="h-2 rounded-full bg-forest transition-all duration-300"
                             style={{ width: `${uploadProgress}%` }}
                           />
                         </div>
-                        <p className="text-sm text-gray-500 text-center">
+                        <p className="text-center text-sm text-gray-500">
                           Uploading... {uploadProgress}%
                         </p>
                       </div>
                     )}
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="duration">Duration (minutes) *</Label>
                       <Input
                         id="duration"
                         type="number"
                         min="1"
-                        value={Math.max(1, Math.round(lessonForm.duration / 60))}
+                        value={Math.max(
+                          1,
+                          Math.round(lessonForm.duration / 60),
+                        )}
                         onChange={(e) =>
                           setLessonForm({
                             ...lessonForm,
@@ -708,8 +753,8 @@ export default function EditCoursePage({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="block mb-3">Preview</Label>
-                      <label className="flex items-center gap-2 cursor-pointer">
+                      <Label className="mb-3 block">Preview</Label>
+                      <label className="flex cursor-pointer items-center gap-2">
                         <input
                           type="checkbox"
                           checked={lessonForm.isFree}
@@ -719,7 +764,7 @@ export default function EditCoursePage({
                               isFree: e.target.checked,
                             })
                           }
-                          className="w-4 h-4"
+                          className="h-4 w-4"
                         />
                         <span>Free preview</span>
                       </label>
@@ -727,7 +772,11 @@ export default function EditCoursePage({
                   </div>
 
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={resetLessonForm}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={resetLessonForm}
+                    >
                       Cancel
                     </Button>
                     <Button type="submit">
@@ -742,7 +791,7 @@ export default function EditCoursePage({
           {course.lessons.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-gray-500 mb-4">No lessons yet</p>
+                <p className="mb-4 text-gray-500">No lessons yet</p>
                 <Button onClick={() => setShowLessonForm(true)}>
                   Add Your First Lesson
                 </Button>
@@ -757,7 +806,7 @@ export default function EditCoursePage({
                     <CardContent className="py-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent font-semibold text-forest">
                             {index + 1}
                           </span>
                           <div>
@@ -797,14 +846,16 @@ export default function EditCoursePage({
       {/* Quizzes Tab */}
       {activeTab === "quizzes" && (
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold">Lesson Quizzes</h2>
           </div>
 
           {course.lessons.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-gray-500 mb-4">Add lessons first to create quizzes</p>
+                <p className="mb-4 text-gray-500">
+                  Add lessons first to create quizzes
+                </p>
                 <Button onClick={() => setActiveTab("lessons")}>
                   Go to Lessons
                 </Button>
@@ -819,7 +870,7 @@ export default function EditCoursePage({
                     <CardContent className="py-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent font-semibold text-forest">
                             {index + 1}
                           </span>
                           <div>
@@ -870,8 +921,8 @@ export default function EditCoursePage({
 
           {/* Quiz Form Modal */}
           {showQuizForm && selectedLessonForQuiz && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="max-w-lg w-full">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="w-full max-w-lg">
                 <QuizForm
                   lessonId={selectedLessonForQuiz}
                   onSuccess={() => {
@@ -891,8 +942,8 @@ export default function EditCoursePage({
 
           {/* Question Form Modal */}
           {showQuestionForm && selectedQuizId && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-              <div className="max-w-2xl w-full my-8">
+            <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+              <div className="my-8 w-full max-w-2xl">
                 <QuestionForm
                   quizId={selectedQuizId}
                   onSuccess={() => {
