@@ -1,14 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface Question {
   id: string;
@@ -38,12 +34,15 @@ interface QuizResult {
   totalPoints: number;
   earnedPoints: number;
   passingScore?: number;
-  answers: Record<string, {
-    userAnswer: string | string[];
-    correctAnswer: string | string[];
-    isCorrect: boolean;
-    points: number;
-  }>;
+  answers: Record<
+    string,
+    {
+      userAnswer: string | string[];
+      correctAnswer: string | string[];
+      isCorrect: boolean;
+      points: number;
+    }
+  >;
 }
 
 interface QuizPlayerProps {
@@ -52,317 +51,354 @@ interface QuizPlayerProps {
   onCancel: () => void;
 }
 
+const HINT: Record<Question["type"], string> = {
+  MULTIPLE_CHOICE: "Pick one",
+  TRUE_FALSE: "True or false",
+  MULTIPLE_SELECT: "Pick all that apply",
+};
+
+const ease = [0.22, 1, 0.36, 1] as const;
+
+const formatTime = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
+
 export function QuizPlayer({ quizId, onComplete, onCancel }: QuizPlayerProps) {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchQuiz();
+    let cancelled = false;
+    fetch(`/api/quizzes/${quizId}`)
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok)
+          throw new Error(data.error || "Couldn't load the quiz");
+        return data as Quiz;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        data.questions.sort((a, b) => a.order - b.order);
+        setQuiz(data);
+        if (data.timeLimit) setTimeLeft(data.timeLimit * 60);
+      })
+      .catch(
+        (err) =>
+          !cancelled &&
+          setError(
+            err instanceof Error ? err.message : "Couldn't load the quiz",
+          ),
+      );
+    return () => {
+      cancelled = true;
+    };
   }, [quizId]);
 
-  useEffect(() => {
-    if (quiz?.timeLimit && timeLeft === null) {
-      setTimeLeft(quiz.timeLimit * 60); // Convert minutes to seconds
-    }
-  }, [quiz, timeLeft]);
-
-  useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev === null || prev <= 1) {
-          clearInterval(timer);
-          handleSubmit(); // Auto-submit when time runs out
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft]);
-
-  const fetchQuiz = async () => {
-    try {
-      const response = await fetch(`/api/quizzes/${quizId}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to load quiz");
-      }
-
-      // Sort questions by order
-      data.questions.sort((a: Question, b: Question) => a.order - b.order);
-      setQuiz(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load quiz");
-    } finally {
-      setIsLoading(false);
-    }
+  const isAnswered = (id: string) => {
+    const a = answers[id];
+    return Array.isArray(a) ? a.length > 0 : Boolean(a);
   };
 
-  const handleAnswerChange = (questionId: string, answer: string | string[]) => {
-    setAnswers({ ...answers, [questionId]: answer });
-  };
-
-  const handleMultiSelectChange = (questionId: string, option: string) => {
-    const current = (answers[questionId] as string[]) || [];
-    if (current.includes(option)) {
-      handleAnswerChange(
-        questionId,
-        current.filter((a) => a !== option)
-      );
-    } else {
-      handleAnswerChange(questionId, [...current, option]);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!quiz) return;
+  const submit = async () => {
+    if (!quiz || isSubmitting) return;
     setIsSubmitting(true);
     setError("");
-
     try {
       const response = await fetch(`/api/quizzes/${quizId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to submit quiz");
-      }
-
-      // Transform API response to match QuizResult interface
-      const result: QuizResult = {
-        score: data.attempt.score,
-        passed: data.attempt.passed,
-        totalPoints: data.attempt.totalPoints,
-        earnedPoints: data.attempt.earnedPoints,
-        answers: data.attempt.gradedAnswers || {},
-        passingScore: data.attempt.passingScore,
-      };
-
-      onComplete(result, quiz.questions);
+      if (!response.ok)
+        throw new Error(data.error || "Couldn't submit the quiz");
+      onComplete(
+        {
+          score: data.attempt.score,
+          passed: data.attempt.passed,
+          totalPoints: data.attempt.totalPoints,
+          earnedPoints: data.attempt.earnedPoints,
+          answers: data.attempt.gradedAnswers || {},
+          passingScore: data.attempt.passingScore,
+        },
+        quiz.questions,
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit quiz");
+      setError(err instanceof Error ? err.message : "Couldn't submit the quiz");
       setIsSubmitting(false);
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+  // The timer submits whatever is answered when it runs out.
+  const submitRef = useRef(submit);
+  useEffect(() => {
+    submitRef.current = submit;
+  });
+  useEffect(() => {
+    if (timeLeft === null) return;
+    if (timeLeft <= 0) {
+      submitRef.current();
+      return;
+    }
+    const id = setTimeout(() => setTimeLeft((t) => (t ?? 1) - 1), 1000);
+    return () => clearTimeout(id);
+  }, [timeLeft]);
 
-  if (isLoading) {
+  const shell =
+    "relative mx-auto w-full max-w-2xl overflow-hidden rounded-[24px] border border-ink/10 bg-paper shadow-2xl";
+
+  if (error && !quiz) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className={cn(shell, "p-10 text-center")}>
+        <p className="font-display text-[30px]">That quiz didn&apos;t load</p>
+        <p className="mt-2 text-muted-foreground">{error}</p>
+        <Button className="mt-6 rounded-full" onClick={onCancel}>
+          Back to the lesson
+        </Button>
       </div>
     );
   }
 
-  if (error) {
+  if (!quiz) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <p className="text-red-500 mb-4">{error}</p>
-          <Button onClick={onCancel}>Go Back</Button>
-        </CardContent>
-      </Card>
+      <div className={cn(shell, "grid h-80 place-items-center")}>
+        <div className="size-9 animate-spin rounded-full border-2 border-forest border-t-transparent" />
+      </div>
     );
   }
 
-  if (!quiz || quiz.questions.length === 0) {
+  if (quiz.questions.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <p className="text-gray-500 mb-4">No questions in this quiz</p>
-          <Button onClick={onCancel}>Go Back</Button>
-        </CardContent>
-      </Card>
+      <div className={cn(shell, "p-10 text-center")}>
+        <p className="font-display text-[30px]">No questions yet</p>
+        <Button className="mt-6 rounded-full" onClick={onCancel}>
+          Back to the lesson
+        </Button>
+      </div>
     );
   }
 
-  const question = quiz.questions[currentQuestion];
-  const totalQuestions = quiz.questions.length;
-  const answeredCount = Object.keys(answers).filter(
-    (k) => answers[k] && (Array.isArray(answers[k]) ? (answers[k] as string[]).length > 0 : true)
-  ).length;
+  const total = quiz.questions.length;
+  const question = quiz.questions[current];
+  const answered = quiz.questions.filter((q) => isAnswered(q.id)).length;
+  const multi = question.type === "MULTIPLE_SELECT";
+  const isLast = current === total - 1;
+
+  const choose = (option: string) => {
+    if (multi) {
+      const picked = (answers[question.id] as string[]) || [];
+      setAnswers({
+        ...answers,
+        [question.id]: picked.includes(option)
+          ? picked.filter((a) => a !== option)
+          : [...picked, option],
+      });
+    } else {
+      setAnswers({ ...answers, [question.id]: option });
+    }
+  };
 
   return (
-    <Card className="max-w-3xl mx-auto">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle>{quiz.title}</CardTitle>
+    <div
+      className={shell}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quiz-title"
+    >
+      {/* header */}
+      <div className="border-b border-border px-6 pt-6 pb-5 sm:px-8">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[12px] font-semibold tracking-[0.14em] text-forest uppercase">
+              Quiz · pass at {quiz.passingScore}%
+            </p>
+            <h2
+              id="quiz-title"
+              className="mt-1.5 font-display text-[32px] leading-none"
+            >
+              {quiz.title}
+            </h2>
             {quiz.description && (
-              <CardDescription>{quiz.description}</CardDescription>
+              <p className="mt-2 text-[14px] text-muted-foreground">
+                {quiz.description}
+              </p>
             )}
           </div>
-          {timeLeft !== null && (
-            <div
-              className={`text-lg font-mono px-3 py-1 rounded ${
-                timeLeft < 60
-                  ? "bg-red-100 text-red-600"
-                  : "bg-gray-100 text-gray-600"
-              }`}
+          <div className="flex shrink-0 items-center gap-2">
+            {timeLeft !== null && (
+              <span
+                className={cn(
+                  "rounded-full px-3 py-1 font-mono text-[14px] tabular-nums",
+                  timeLeft < 60
+                    ? "bg-clay/10 text-clay"
+                    : "bg-secondary text-ink/70",
+                )}
+                aria-label="Time left"
+              >
+                {formatTime(timeLeft)}
+              </span>
+            )}
+            <button
+              onClick={onCancel}
+              aria-label="Close the quiz"
+              className="grid size-9 place-items-center rounded-full text-ink/60 transition hover:bg-secondary hover:text-ink"
             >
-              {formatTime(timeLeft)}
-            </div>
-          )}
+              <X className="size-4" />
+            </button>
+          </div>
         </div>
-        <div className="flex justify-between text-sm text-gray-500 mt-2">
+
+        <div className="mt-5 flex items-center justify-between text-[13px] text-muted-foreground">
           <span>
-            Question {currentQuestion + 1} of {totalQuestions}
+            Question {current + 1} of {total}
           </span>
-          <span>
-            {answeredCount} of {totalQuestions} answered
-          </span>
+          <span>{answered} answered</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-          <div
-            className="bg-blue-600 h-2 rounded-full transition-all"
-            style={{ width: `${((currentQuestion + 1) / totalQuestions) * 100}%` }}
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary">
+          <motion.div
+            className="h-full rounded-full bg-forest"
+            initial={false}
+            animate={{ width: `${((current + 1) / total) * 100}%` }}
+            transition={{ duration: 0.5, ease }}
           />
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium mb-1">{question.text}</h3>
-          <p className="text-sm text-gray-500">{question.points} point(s)</p>
-        </div>
+      {/* question */}
+      <div className="px-6 py-7 sm:px-8">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={question.id}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.28, ease }}
+          >
+            <h3 className="text-[20px] leading-snug font-semibold">
+              {question.text}
+            </h3>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              {HINT[question.type]} · {question.points}{" "}
+              {question.points === 1 ? "point" : "points"}
+            </p>
 
-        <div className="space-y-2">
-          {question.options.map((option, index) => {
-            const isSelected =
-              question.type === "MULTIPLE_SELECT"
-                ? ((answers[question.id] as string[]) || []).includes(option)
-                : answers[question.id] === option;
-
-            return (
-              <button
-                key={index}
-                type="button"
-                onClick={() =>
-                  question.type === "MULTIPLE_SELECT"
-                    ? handleMultiSelectChange(question.id, option)
-                    : handleAnswerChange(question.id, option)
-                }
-                className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
-                  isSelected
-                    ? "border-blue-600 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-5 h-5 rounded-${
-                      question.type === "MULTIPLE_SELECT" ? "sm" : "full"
-                    } border-2 flex items-center justify-center ${
-                      isSelected
-                        ? "border-blue-600 bg-blue-600"
-                        : "border-gray-300"
-                    }`}
-                  >
-                    {isSelected && (
-                      <svg
-                        className="w-3 h-3 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={3}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
+            <div className="mt-5 space-y-2.5">
+              {question.options.map((option, i) => {
+                const selected = multi
+                  ? ((answers[question.id] as string[]) || []).includes(option)
+                  : answers[question.id] === option;
+                return (
+                  <motion.button
+                    key={option}
+                    type="button"
+                    onClick={() => choose(option)}
+                    whileTap={{ scale: 0.985 }}
+                    aria-pressed={selected}
+                    className={cn(
+                      "flex w-full items-center gap-3.5 rounded-xl border px-4 py-3.5 text-start text-[15px] transition-colors",
+                      selected
+                        ? "border-forest bg-accent"
+                        : "border-border bg-card hover:border-ink/30",
                     )}
-                  </div>
-                  <span>{option}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+                  >
+                    <span
+                      className={cn(
+                        "grid size-6 shrink-0 place-items-center border text-[12px] font-semibold transition-colors",
+                        multi ? "rounded-md" : "rounded-full",
+                        selected
+                          ? "border-forest bg-forest text-paper"
+                          : "border-ink/25 text-ink/55",
+                      )}
+                    >
+                      {selected ? (
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 600,
+                            damping: 26,
+                          }}
+                        >
+                          <Check className="size-3.5" strokeWidth={3} />
+                        </motion.span>
+                      ) : (
+                        String.fromCharCode(65 + i)
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">{option}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </motion.div>
+        </AnimatePresence>
 
-        {/* Question Navigation */}
-        <div className="flex flex-wrap gap-2 pt-4 border-t">
-          {quiz.questions.map((q, index) => {
-            const isAnswered =
-              answers[q.id] &&
-              (Array.isArray(answers[q.id])
-                ? (answers[q.id] as string[]).length > 0
-                : true);
-            const isCurrent = index === currentQuestion;
+        {error && (
+          <p className="mt-5 rounded-xl bg-clay/10 p-3 text-[14px] text-clay">
+            {error}
+          </p>
+        )}
+      </div>
 
-            return (
-              <button
-                key={q.id}
-                onClick={() => setCurrentQuestion(index)}
-                className={`w-8 h-8 rounded text-sm font-medium ${
-                  isCurrent
-                    ? "bg-blue-600 text-white"
-                    : isAnswered
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {index + 1}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between pt-4">
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentQuestion((prev) => Math.max(0, prev - 1))}
-              disabled={currentQuestion === 0}
+      {/* footer */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border bg-card px-6 py-4 sm:px-8">
+        <div className="flex flex-wrap gap-1.5" aria-label="Questions">
+          {quiz.questions.map((q, i) => (
+            <button
+              key={q.id}
+              onClick={() => setCurrent(i)}
+              aria-label={`Question ${i + 1}${isAnswered(q.id) ? ", answered" : ""}`}
+              aria-current={i === current}
+              className={cn(
+                "size-8 rounded-full text-[13px] font-semibold transition-colors",
+                i === current
+                  ? "bg-ink text-paper"
+                  : isAnswered(q.id)
+                    ? "bg-forest/15 text-forest"
+                    : "bg-secondary text-ink/55 hover:text-ink",
+              )}
             >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() =>
-                setCurrentQuestion((prev) =>
-                  Math.min(totalQuestions - 1, prev + 1)
-                )
-              }
-              disabled={currentQuestion === totalQuestions - 1}
-            >
-              Next
-            </Button>
-          </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || answeredCount === 0}
-            >
-              {isSubmitting ? "Submitting..." : "Submit Quiz"}
-            </Button>
-          </div>
+              {i + 1}
+            </button>
+          ))}
         </div>
-      </CardContent>
-    </Card>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-full"
+            aria-label="Previous question"
+            disabled={current === 0}
+            onClick={() => setCurrent((c) => Math.max(0, c - 1))}
+          >
+            <ArrowLeft className="rtl:rotate-180" />
+          </Button>
+          {isLast || answered === total ? (
+            <Button
+              className="rounded-full px-5"
+              onClick={submit}
+              disabled={isSubmitting || answered === 0}
+            >
+              {isSubmitting
+                ? "Checking…"
+                : answered === total
+                  ? "Submit answers"
+                  : `Submit ${answered} of ${total}`}
+            </Button>
+          ) : (
+            <Button
+              className="rounded-full px-5"
+              onClick={() => setCurrent((c) => Math.min(total - 1, c + 1))}
+            >
+              Next <ArrowRight className="rtl:rotate-180" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

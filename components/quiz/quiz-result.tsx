@@ -1,12 +1,9 @@
 "use client";
 
+import { motion } from "motion/react";
+import { Check, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface QuizResultProps {
   result: {
@@ -14,12 +11,15 @@ interface QuizResultProps {
     passed: boolean;
     totalPoints: number;
     earnedPoints: number;
-    answers: Record<string, {
-      userAnswer: string | string[];
-      correctAnswer: string | string[];
-      isCorrect: boolean;
-      points: number;
-    }>;
+    answers: Record<
+      string,
+      {
+        userAnswer: string | string[];
+        correctAnswer: string | string[];
+        isCorrect: boolean;
+        points: number;
+      }
+    >;
   };
   questions?: Array<{
     id: string;
@@ -32,168 +32,189 @@ interface QuizResultProps {
   onClose: () => void;
 }
 
-export function QuizResult({ result, questions, passingScore, onRetry, onClose }: QuizResultProps) {
-  const answersArray = result.answers ? Object.entries(result.answers) : [];
-  const correctCount = answersArray.filter(([, a]) => a.isCorrect).length;
-  const wrongAnswers = answersArray.filter(([, a]) => !a.isCorrect);
+const ease = [0.22, 1, 0.36, 1] as const;
+const RADIUS = 52;
 
-  const getQuestionText = (questionId: string) => {
-    return questions?.find(q => q.id === questionId)?.text || "Question";
-  };
+const formatAnswer = (answer: string | string[]) =>
+  Array.isArray(answer)
+    ? answer.length
+      ? answer.join(", ")
+      : "No answer"
+    : String(answer || "No answer");
 
-  const formatAnswer = (answer: string | string[]) => {
-    if (Array.isArray(answer)) {
-      return answer.join(", ");
-    }
-    return String(answer);
-  };
+export function QuizResult({
+  result,
+  questions,
+  passingScore,
+  onRetry,
+  onClose,
+}: QuizResultProps) {
+  const graded = Object.entries(result.answers ?? {});
+  const correct = graded.filter(([, a]) => a.isCorrect).length;
+  const missed = graded.filter(([, a]) => !a.isCorrect);
+  const score = Math.round(result.score);
+  const questionText = (id: string) =>
+    questions?.find((q) => q.id === id)?.text || "Question";
+  const tone = result.passed ? "var(--forest)" : "var(--clay)";
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader className="text-center">
-        <div
-          className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${
-            result.passed ? "bg-green-100" : "bg-red-100"
-          }`}
-        >
-          {result.passed ? (
-            <svg
-              className="w-10 h-10 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="w-10 h-10 text-red-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          )}
-        </div>
-        <CardTitle className={result.passed ? "text-green-600" : "text-red-600"}>
-          {result.passed ? "Congratulations! You Passed!" : "Quiz Not Passed"}
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        {/* Score Summary */}
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <p className="text-3xl font-bold text-blue-600">
-              {Math.round(result.score)}%
-            </p>
-            <p className="text-sm text-gray-500">Your Score</p>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <p className="text-3xl font-bold text-gray-600">{passingScore}%</p>
-            <p className="text-sm text-gray-500">Passing Score</p>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <p className="text-3xl font-bold text-green-600">
-              {correctCount}/{answersArray.length}
-            </p>
-            <p className="text-sm text-gray-500">Correct</p>
-          </div>
-        </div>
-
-        {/* Points breakdown */}
-        <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-          <span className="text-gray-600">Points Earned</span>
-          <span className="font-bold">
-            {result.earnedPoints} / {result.totalPoints}
-          </span>
-        </div>
-
-        {/* Progress bar */}
-        <div>
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-gray-500">Score Progress</span>
-            <span className={result.passed ? "text-green-600" : "text-red-600"}>
-              {Math.round(result.score)}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div
-              className={`h-3 rounded-full transition-all ${
-                result.passed ? "bg-green-500" : "bg-red-500"
-              }`}
-              style={{ width: `${Math.min(result.score, 100)}%` }}
-            />
-          </div>
-          <div
-            className="relative h-0"
-            style={{ left: `${passingScore}%` }}
+    <div className="relative mx-auto w-full max-w-2xl overflow-hidden rounded-[24px] border border-ink/10 bg-paper shadow-2xl">
+      <div className="flex flex-col items-center px-6 pt-10 pb-8 text-center sm:px-8">
+        {/* score ring */}
+        <div className="relative size-[132px]">
+          <svg
+            viewBox="0 0 120 120"
+            className="size-full -rotate-90"
+            aria-hidden
           >
-            <div className="absolute -top-3 w-0.5 h-3 bg-gray-400" />
+            <circle
+              cx="60"
+              cy="60"
+              r={RADIUS}
+              fill="none"
+              stroke="var(--secondary)"
+              strokeWidth="9"
+            />
+            {/* pass mark */}
+            <circle
+              cx="60"
+              cy="60"
+              r={RADIUS}
+              fill="none"
+              stroke="var(--ink)"
+              strokeOpacity="0.35"
+              strokeWidth="9"
+              pathLength={100}
+              strokeDasharray={`0.8 99.2`}
+              strokeDashoffset={-passingScore}
+            />
+            <motion.circle
+              cx="60"
+              cy="60"
+              r={RADIUS}
+              fill="none"
+              stroke={tone}
+              strokeWidth="9"
+              strokeLinecap="round"
+              initial={{ pathLength: 0 }}
+              animate={{
+                pathLength: Math.max(0.001, Math.min(score, 100) / 100),
+              }}
+              transition={{ duration: 1.2, ease, delay: 0.15 }}
+            />
+          </svg>
+          <div className="absolute inset-0 grid place-items-center">
+            <motion.span
+              className="font-display text-[42px] leading-none"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease, delay: 0.35 }}
+            >
+              {score}%
+            </motion.span>
           </div>
+          <motion.span
+            className={cn(
+              "absolute -end-1 bottom-1 grid size-9 place-items-center rounded-full text-paper",
+              result.passed ? "bg-forest" : "bg-clay",
+            )}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{
+              type: "spring",
+              stiffness: 500,
+              damping: 18,
+              delay: 1.1,
+            }}
+          >
+            {result.passed ? (
+              <Check className="size-5" strokeWidth={3} />
+            ) : (
+              <X className="size-5" strokeWidth={3} />
+            )}
+          </motion.span>
         </div>
 
-        {/* Message */}
-        <p className="text-center text-gray-600">
+        <h2 className="mt-6 font-display text-[38px] leading-none">
+          {result.passed ? (
+            <>
+              Passed. <span className="mark">Nicely done.</span>
+            </>
+          ) : (
+            "Not quite yet."
+          )}
+        </h2>
+        <p className="mt-3 max-w-md text-[15px] text-muted-foreground">
           {result.passed
-            ? "Great job! You've successfully completed this quiz."
-            : `You need at least ${passingScore}% to pass. Keep learning and try again!`}
+            ? "That counts as finishing this lesson. Keep going while it's fresh."
+            : `You need ${passingScore}% to pass. Have another look at the lecture, then try again. Retakes are unlimited.`}
         </p>
 
-        {/* Wrong Answers Review */}
-        {wrongAnswers.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Incorrect Answers ({wrongAnswers.length})
-            </h3>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {wrongAnswers.map(([questionId, answer]) => (
-                <div key={questionId} className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="font-medium text-gray-900 mb-2">
-                    {getQuestionText(questionId)}
-                  </p>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex items-start gap-2">
-                      <span className="text-red-600 font-medium">Your answer:</span>
-                      <span className="text-red-700">{formatAnswer(answer.userAnswer)}</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-600 font-medium">Correct answer:</span>
-                      <span className="text-green-700">{formatAnswer(answer.correctAnswer)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+        <dl className="mt-7 grid w-full max-w-md grid-cols-3 gap-px overflow-hidden rounded-2xl border border-border bg-border text-center">
+          {[
+            [`${correct}/${graded.length}`, "correct"],
+            [`${result.earnedPoints}/${result.totalPoints}`, "points"],
+            [`${passingScore}%`, "to pass"],
+          ].map(([value, label]) => (
+            <div key={label} className="bg-card px-3 py-3.5">
+              <dd className="text-[19px] font-semibold tabular-nums">
+                {value}
+              </dd>
+              <dt className="text-[12.5px] text-muted-foreground">{label}</dt>
             </div>
-          </div>
-        )}
+          ))}
+        </dl>
+      </div>
 
-        {/* Actions */}
-        <div className="flex justify-center gap-4 pt-4">
-          {!result.passed && (
-            <Button variant="outline" onClick={onRetry}>
-              Try Again
-            </Button>
-          )}
-          <Button onClick={onClose}>
-            {result.passed ? "Continue" : "Go Back"}
-          </Button>
+      {missed.length > 0 && (
+        <div className="border-t border-border px-6 py-6 sm:px-8">
+          <h3 className="text-[13px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+            Worth another look ({missed.length})
+          </h3>
+          <ul className="mt-4 max-h-72 space-y-3 overflow-y-auto pe-1">
+            {missed.map(([id, answer], i) => (
+              <motion.li
+                key={id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease, delay: 0.5 + i * 0.08 }}
+                className="rounded-xl border border-border bg-card p-4"
+              >
+                <p className="text-[15px] font-medium">{questionText(id)}</p>
+                <div className="mt-2.5 grid gap-1.5 text-[14px] sm:grid-cols-2">
+                  <p>
+                    <span className="block text-[12px] text-muted-foreground">
+                      You answered
+                    </span>
+                    <span className="text-clay line-through decoration-clay/40">
+                      {formatAnswer(answer.userAnswer)}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="block text-[12px] text-muted-foreground">
+                      Correct answer
+                    </span>
+                    <span className="font-medium text-forest">
+                      {formatAnswer(answer.correctAnswer)}
+                    </span>
+                  </p>
+                </div>
+              </motion.li>
+            ))}
+          </ul>
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      <div className="flex flex-wrap justify-end gap-2 border-t border-border bg-card px-6 py-4 sm:px-8">
+        {!result.passed && (
+          <Button variant="outline" className="rounded-full" onClick={onRetry}>
+            <RotateCcw /> Try again
+          </Button>
+        )}
+        <Button className="rounded-full px-5" onClick={onClose}>
+          {result.passed ? "Continue" : "Back to the lesson"}
+        </Button>
+      </div>
+    </div>
   );
 }
