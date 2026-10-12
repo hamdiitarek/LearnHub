@@ -1,191 +1,133 @@
-# LearnHub - E-Learning Platform (Mini LMS)
+# LearnHub
 
-A comprehensive e-learning platform similar to Udemy that allows instructors to upload courses and students to enroll, watch videos, take quizzes, and track progress.
+A learning platform that turns great free lectures into structured courses: an ordered path of lessons, quizzes after the key ones, progress that saves itself, and a verifiable certificate at the end. Students learn, instructors curate courses, and admins look after the platform.
 
-## 🚀 Features
+## Try it in one click
 
-### For Students
-- Browse and search courses by category, level, and keywords
-- Enroll in courses (free or paid)
-- Watch video lessons with progress tracking
-- Take quizzes and earn certificates
-- Track learning progress across all enrolled courses
-- Leave reviews and ratings
+Run it without any setup and LearnHub starts on a built-in demo database (see [Demo mode](#demo-mode)). The sign-in page has one-click buttons for each role, and links like `/login?demo=student` sign in directly.
 
-### For Instructors
-- Create and manage courses
-- Add video lessons with ordering
-- Create quizzes with multiple question types
-- View enrollment statistics and revenue
-- Manage course publishing status
+| Role | Account | What to look at |
+|------|---------|-----------------|
+| Student | Nour Hassan · `student@learnhub.demo` | Dashboard with two courses in progress, one not started, and a finished course with its certificate (PDF download) |
+| Instructor | Omar Nabil · `omar@learnhub.demo` | Their own courses, the course editor, lessons from YouTube links, quizzes |
+| Admin | Mona Fathy · `admin@learnhub.demo` | Platform stats, weekly enrolments, publishing any course, people and roles |
 
-### For Administrators
-- View platform-wide statistics
-- Manage users and roles
-- Moderate content
+Every demo account uses the password `learnhub-demo`.
 
-## 🛠️ Tech Stack
+## Features
 
-- **Framework:** Next.js 16 with React 19 (App Router)
-- **Database:** PostgreSQL with Prisma ORM
-- **Authentication:** NextAuth.js (Auth.js) with JWT strategy
-- **Styling:** Tailwind CSS with Shadcn/UI components
-- **Validation:** Zod with React Hook Form
-- **State Management:** TanStack Query (React Query)
+**Students**
+- Browse and search the catalogue by subject and level
+- Watch lessons as embedded YouTube lectures; the next unfinished lesson opens automatically
+- Take quizzes (multiple choice, true/false, multi-select) with instant grading and retakes
+- Track progress per course on a personal dashboard
+- Earn a certificate with its own number, a public verification page and a PDF download
+- Rate and review courses
 
-## 📋 Prerequisites
+**Instructors**
+- See and manage only the courses they curate, drafts included
+- Add lessons from a YouTube link (or an uploaded file outside the demo), reorder them, attach quizzes
+- Publish when ready, or move a course back to drafts
 
-- Node.js 18+ 
-- PostgreSQL database
-- npm or pnpm
+**Admins**
+- Platform overview: learners, published courses, enrolments, completion rate, certificates, average rating
+- Enrolments per week for the last 12 weeks, most enrolled courses, latest activity
+- Publish or unpublish any course and open it in the editor
+- Search people and change roles
 
-## 🔧 Installation
+## Demo mode
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd nextjs-boilerplate
-   ```
+When `DATABASE_URL` is **not** set, the app runs an in-process PostgreSQL ([PGlite](https://pglite.dev)) through the Prisma driver adapter, creates the schema and seeds it on first request. Nothing to install and no environment variables needed. Changes last until the server restarts.
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+The seed (`lib/demo/seed.ts`, deterministic so every start looks the same) contains:
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Update `.env` with your values:
-   ```env
-   DATABASE_URL="postgresql://username:password@localhost:5432/learnhub"
-   NEXTAUTH_URL="http://localhost:3000"
-   NEXTAUTH_SECRET="your-secret-key-here"
-   ```
+- 10 published courses and 1 draft, 39 lessons, about 141 hours of lectures and 13 quizzes (`lib/demo/catalog.ts`)
+- 1 admin, 4 instructors and 24 students with enrolments, progress, quiz attempts, reviews and 31 certificates
 
-4. **Generate Prisma client and push schema**
-   ```bash
-   npx prisma generate
-   npx prisma db push
-   ```
+Lessons embed the original videos from YouTube (via `youtube-nocookie.com`) and credit each creator on the lesson: freeCodeCamp.org, Traversy Media, Programming with Mosh, 3Blue1Brown, Corey Schafer, Keith Galli, TechWorld with Nana and Dr. Raj Ramesh. The videos belong to their creators; LearnHub only adds the structure around them.
 
-5. **Run the development server**
-   ```bash
-   npm run dev
-   ```
+If you change `prisma/schema.prisma`, regenerate the demo schema with:
 
-6. **Open the app**
-   Visit [http://localhost:3000](http://localhost:3000)
-
-## 📁 Project Structure
-
-```
-nextjs-boilerplate/
-├── app/
-│   ├── (auth)/                 # Authentication pages
-│   │   ├── login/
-│   │   └── register/
-│   ├── (main)/                 # Main pages with navbar/footer
-│   │   ├── courses/            # Course browsing and details
-│   │   ├── dashboard/          # Student dashboard
-│   │   ├── instructor/         # Instructor dashboard
-│   │   └── admin/              # Admin dashboard
-│   └── api/                    # API routes
-│       ├── auth/               # Authentication APIs
-│       ├── courses/            # Course CRUD APIs
-│       ├── enrollments/        # Enrollment APIs
-│       ├── progress/           # Progress tracking APIs
-│       ├── quizzes/            # Quiz APIs
-│       ├── reviews/            # Review APIs
-│       └── admin/              # Admin APIs
-├── components/
-│   ├── layout/                 # Navbar, Footer
-│   └── ui/                     # Shadcn UI components
-├── lib/
-│   ├── auth.ts                 # NextAuth configuration
-│   ├── db.ts                   # Prisma client
-│   ├── utils.ts                # Utility functions
-│   └── validations.ts          # Zod schemas
-├── prisma/
-│   └── schema.prisma           # Database schema
-├── providers/                  # React context providers
-└── docs/                       # Project documentation
-    ├── 1-PROJECT-PROPOSAL.md
-    ├── 2-SRS-DOCUMENT.md
-    └── 4-DATABASE-DESIGN.md
-```
-
-## 🗄️ Database Schema
-
-The application uses the following main models:
-- **User** - Students, Instructors, and Admins
-- **Course** - Course information with status management
-- **Lesson** - Video lessons with ordering
-- **Enrollment** - Student-course relationships
-- **Progress** - Lesson completion tracking
-- **Quiz** - Quizzes attached to lessons
-- **Question** - Quiz questions with multiple types
-- **QuizAttempt** - Quiz submission records
-- **Review** - Course ratings and comments
-- **Certificate** - Completion certificates
-
-## 🔐 User Roles
-
-| Role | Capabilities |
-|------|-------------|
-| STUDENT | Browse courses, enroll, watch lessons, take quizzes |
-| INSTRUCTOR | All student capabilities + create/manage courses |
-| ADMIN | All capabilities + manage users and platform |
-
-## 📚 API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/[...nextauth]` - NextAuth handlers
-
-### Courses
-- `GET /api/courses` - List courses with filters
-- `POST /api/courses` - Create course (Instructor)
-- `GET /api/courses/[id]` - Get course details
-- `PATCH /api/courses/[id]` - Update course
-- `DELETE /api/courses/[id]` - Delete course
-- `POST /api/courses/[id]/publish` - Publish course
-- `POST /api/courses/[id]/enroll` - Enroll in course
-
-### Lessons
-- `GET /api/courses/[id]/lessons` - Get course lessons
-- `POST /api/courses/[id]/lessons` - Create lesson
-
-### Progress
-- `GET /api/progress` - Get user progress
-- `POST /api/progress` - Update progress
-
-### Quizzes
-- `GET /api/quizzes` - Get quiz by lesson
-- `POST /api/quizzes` - Create quiz
-- `POST /api/quizzes/[id]/submit` - Submit quiz
-
-## 📖 Documentation
-
-Additional documentation can be found in the `/docs` folder:
-- **Project Proposal** - Initial project ideas and selection
-- **SRS Document** - Software Requirements Specification
-- **Database Design** - ERD, schema definitions, and queries
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-1. Push your code to GitHub
-2. Import the project to Vercel
-3. Add environment variables
-4. Deploy
-
-### Docker
 ```bash
-docker-compose up -d
+npm run demo:schema
 ```
 
-## 📝 License
+## Tech stack
+
+- **Framework:** Next.js 16 (App Router, Turbopack) with React 19
+- **Database:** PostgreSQL with Prisma 7 (driver adapters: `pg` in production, PGlite in demo mode)
+- **Auth:** Auth.js (NextAuth v5) with credentials and JWT sessions
+- **UI:** Tailwind CSS v4 and shadcn/ui, Schibsted Grotesk and Instrument Serif
+- **Motion:** GSAP (ScrollTrigger and SplitText) for scroll and intro effects; Framer Motion (`motion`) for interface transitions. Both respect the "reduce motion" setting.
+- **Data:** TanStack Query, Zod validation, PDFKit for certificate PDFs
+
+## Running locally
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). With no `.env`, you're in demo mode.
+
+### With your own PostgreSQL
+
+```bash
+cp .env.example .env    # set DATABASE_URL and a long random NEXTAUTH_SECRET
+npx prisma db push
+npm run dev
+```
+
+Setting `DATABASE_URL` turns demo mode off: no seed data and no demo buttons.
+
+## Deployment
+
+On Vercel, import the repository and deploy. Without environment variables it serves the demo. For a real deployment, set `DATABASE_URL` and `AUTH_SECRET` (or `NEXTAUTH_SECRET`).
+
+## Project structure
+
+```
+app/
+├── (auth)/                 # Sign in and register
+├── (main)/                 # Pages with the navbar and footer
+│   ├── page.tsx            # Home
+│   ├── courses/            # Catalogue, course page, lesson player
+│   ├── dashboard/          # Student dashboard
+│   ├── certificates/       # Public certificate pages
+│   ├── instructor/         # Instructor dashboard and course editor
+│   └── admin/              # Admin area
+└── api/                    # Route handlers (courses, lessons, progress, quizzes, reviews, certificates, admin)
+components/
+├── course/                 # Course cards and generated "textbook" covers
+├── motion/                 # GSAP effects (page-motion.tsx)
+├── quiz/                   # Quiz player
+└── ui/                     # shadcn/ui components
+lib/
+├── auth.ts                 # Auth.js configuration
+├── db.ts                   # Prisma client (Postgres or the PGlite demo)
+├── demo/                   # Demo catalogue, seed, accounts and generated schema
+└── validations.ts          # Zod schemas
+prisma/schema.prisma        # Database schema
+docs/                       # Proposal, SRS and database design
+```
+
+## API overview
+
+| Area | Endpoints |
+|------|-----------|
+| Auth | `POST /api/auth/register`, Auth.js handlers under `/api/auth/*` |
+| Courses | `GET/POST /api/courses` (`?my=true` for your own), `GET/PATCH/DELETE /api/courses/[id]`, `POST/DELETE /api/courses/[id]/publish`, `POST/DELETE /api/courses/[id]/enroll` |
+| Lessons | `GET/POST /api/courses/[id]/lessons`, `GET/PATCH/DELETE /api/courses/[id]/lessons/[lessonId]` |
+| Learning | `GET/POST /api/progress`, `GET /api/enrollments` |
+| Quizzes | `POST /api/quizzes`, `GET/PATCH/DELETE /api/quizzes/[id]`, `GET/POST /api/quizzes/[id]/questions`, `POST /api/quizzes/[id]/submit` |
+| Reviews | `GET/POST /api/reviews` |
+| Certificates | `GET/POST /api/certificates`, `GET /api/certificates/[number]/pdf` |
+| Admin | `GET /api/admin/stats`, `GET /api/admin/users`, `GET/PATCH/DELETE /api/admin/users/[id]` |
+
+## Documentation
+
+The `docs` folder has the project proposal, the software requirements specification and the database design (ERD, schema and queries).
+
+## License
 
 This project is for educational purposes.
