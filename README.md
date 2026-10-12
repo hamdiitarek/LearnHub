@@ -2,9 +2,13 @@
 
 A learning platform that turns great free lectures into structured courses: an ordered path of lessons, quizzes after the key ones, progress that saves itself, and a verifiable certificate at the end. Students learn, instructors curate courses, and admins look after the platform.
 
+**Live demo: [learnhub-courses.vercel.app](https://learnhub-courses.vercel.app)**
+
+![LearnHub home page](docs/screenshots/home.jpg)
+
 ## Try it in one click
 
-Run it without any setup and LearnHub starts on a built-in demo database (see [Demo mode](#demo-mode)). The sign-in page has one-click buttons for each role, and links like `/login?demo=student` sign in directly.
+The [live demo](https://learnhub-courses.vercel.app) and a fresh clone both start on a built-in demo database (see [Demo mode](#demo-mode)). The sign-in page has one-click buttons for each role, and links like [`/login?demo=student`](https://learnhub-courses.vercel.app/login?demo=student) sign in directly.
 
 | Role | Account | What to look at |
 |------|---------|-----------------|
@@ -13,6 +17,19 @@ Run it without any setup and LearnHub starts on a built-in demo database (see [D
 | Admin | Mona Fathy · `admin@learnhub.demo` | Platform stats, weekly enrolments, publishing any course, people and roles |
 
 Every demo account uses the password `learnhub-demo`.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Course catalogue with search, subject filters and textbook-style covers](docs/screenshots/catalog.jpg) | ![Course page with the ordered path of lessons](docs/screenshots/course.jpg) |
+| **Catalogue** · search, subjects and levels | **Course page** · the path of lessons, quizzes and the curator |
+| ![Lesson player with the lecture, course path and progress](docs/screenshots/lesson.jpg) | ![Quiz with lettered options and question navigation](docs/screenshots/quiz.jpg) |
+| **Lesson** · the YouTube lecture, the course path and progress | **Quiz** · graded instantly, retakes unlimited |
+| ![Student dashboard with courses in progress](docs/screenshots/dashboard.jpg) | ![Certificate of completion with a verification number](docs/screenshots/certificate.jpg) |
+| **Dashboard** · where each course was left off | **Certificate** · public verification page and PDF |
+| ![Admin overview with stats, weekly enrolments and most enrolled courses](docs/screenshots/admin.jpg) | <img src="docs/screenshots/mobile-home.jpg" alt="LearnHub home page on a phone" width="260"> |
+| **Admin** · stats, enrolment trend, courses and people | **On a phone** |
 
 ## Features
 
