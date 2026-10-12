@@ -18,7 +18,8 @@ import { Progress } from "@/components/ui/progress";
 import { QuizPlayer } from "@/components/quiz/quiz-player";
 import { QuizResult } from "@/components/quiz/quiz-result";
 import { formatDuration } from "@/lib/format";
-import { youtubeEmbedUrl, youtubeId } from "@/lib/youtube";
+import { youtubeId } from "@/lib/youtube";
+import { YouTubePlayer } from "@/components/course/youtube-player";
 import { cn } from "@/lib/utils";
 
 interface Quiz {
@@ -326,14 +327,10 @@ export default function LearnPage({
           <div className="overflow-hidden rounded-2xl bg-ink shadow-[0_30px_60px_-40px_rgb(18_32_26/0.6)]">
             <div className="aspect-video">
               {ytId ? (
-                <iframe
+                <YouTubePlayer
                   key={currentLesson.id}
-                  src={youtubeEmbedUrl(ytId)}
+                  id={ytId}
                   title={currentLesson.title}
-                  className="size-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allowFullScreen
                 />
               ) : currentLesson.videoUrl ? (
                 <video

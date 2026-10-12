@@ -19,12 +19,16 @@ export function youtubeId(url: string | null | undefined): string | null {
 }
 
 /** Privacy-enhanced embed URL (no cookies until the viewer presses play). */
-export function youtubeEmbedUrl(id: string, start?: number) {
+export function youtubeEmbedUrl(
+  id: string,
+  { start, autoplay }: { start?: number; autoplay?: boolean } = {},
+) {
   const params = new URLSearchParams({
     rel: "0",
     modestbranding: "1",
     playsinline: "1",
   });
   if (start) params.set("start", String(start));
+  if (autoplay) params.set("autoplay", "1");
   return `https://www.youtube-nocookie.com/embed/${id}?${params}`;
 }
