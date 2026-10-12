@@ -37,6 +37,7 @@ interface QuizResult {
   passed: boolean;
   totalPoints: number;
   earnedPoints: number;
+  passingScore?: number;
   answers: Record<string, {
     userAnswer: string | string[];
     correctAnswer: string | string[];

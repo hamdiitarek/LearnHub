@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDuration } from "@/lib/format";
+
 import { useState, useEffect, use } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -76,7 +78,7 @@ export default function EditCoursePage({
     description: "",
     videoUrl: "",
     content: "",
-    duration: 10,
+    duration: 600,
     isFree: false,
   });
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -273,7 +275,7 @@ export default function EditCoursePage({
       description: "",
       videoUrl: "",
       content: "",
-      duration: 10,
+      duration: 600,
       isFree: false,
     });
     setVideoFile(null);
@@ -613,7 +615,21 @@ export default function EditCoursePage({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="videoFile">Video File</Label>
+                    <Label htmlFor="videoUrl">Video link</Label>
+                    <Input
+                      id="videoUrl"
+                      type="url"
+                      placeholder="https://www.youtube.com/watch?v=…"
+                      value={lessonForm.videoUrl}
+                      onChange={(e) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Paste a YouTube link (it plays inside the lesson), or upload a file below.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="videoFile">Or upload a video file</Label>
                     <div className="border-2 border-dashed rounded-lg p-4 text-center">
                       {videoFile ? (
                         <div className="space-y-2">
@@ -679,11 +695,12 @@ export default function EditCoursePage({
                         id="duration"
                         type="number"
                         min="1"
-                        value={lessonForm.duration}
+                        value={Math.max(1, Math.round(lessonForm.duration / 60))}
                         onChange={(e) =>
                           setLessonForm({
                             ...lessonForm,
-                            duration: parseInt(e.target.value) || 10,
+                            // Stored in seconds; entered in minutes.
+                            duration: (parseInt(e.target.value) || 10) * 60,
                           })
                         }
                         required
@@ -746,7 +763,7 @@ export default function EditCoursePage({
                           <div>
                             <h4 className="font-medium">{lesson.title}</h4>
                             <p className="text-sm text-gray-500">
-                              {lesson.duration} min
+                              {formatDuration(lesson.duration)}
                               {lesson.isFree && " • Free preview"}
                             </p>
                           </div>

@@ -1,193 +1,175 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
-import {
-  BookOpen,
-  GraduationCap,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Settings,
-  User,
-  X,
-} from "lucide-react";
+import { Logo } from "@/components/brand/logo";
+import { LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "motion/react";
 
 export function Navbar() {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
   const isLoading = status === "loading";
+  const role = session?.user?.role;
+
+  const links = [
+    { href: "/courses", label: "Courses" },
+    ...(session?.user ? [{ href: "/dashboard", label: "My learning" }] : []),
+    ...(role === "INSTRUCTOR" ? [{ href: "/instructor", label: "Teach" }] : []),
+    ...(role === "ADMIN" ? [{ href: "/admin", label: "Admin" }] : []),
+  ];
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <GraduationCap className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold">LearnHub</span>
-        </Link>
+    <nav className="sticky top-0 z-50 w-full border-b border-border/70 bg-paper/85 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-5">
+        <Logo />
 
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-6">
-          <Link
-            href="/courses"
-            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-          >
-            Browse Courses
-          </Link>
-
-          {session?.user && (
-            <>
-              {session.user.role === "INSTRUCTOR" && (
-                <Link
-                  href="/instructor/courses"
-                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-                >
-                  My Courses
-                </Link>
-              )}
-              <Link
-                href="/dashboard"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
-                Dashboard
-              </Link>
-            </>
-          )}
-
-          {session?.user?.role === "ADMIN" && (
+        <div className="hidden items-center gap-1 md:flex">
+          {links.map((l) => (
             <Link
-              href="/admin"
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              key={l.href}
+              href={l.href}
+              className={cn(
+                "relative rounded-full px-3.5 py-1.5 text-[14px] font-medium transition-colors",
+                isActive(l.href)
+                  ? "text-paper"
+                  : "text-ink/70 hover:bg-secondary hover:text-ink",
+              )}
             >
-              Admin
+              {isActive(l.href) && (
+                <motion.span
+                  layoutId="nav-pill"
+                  className="absolute inset-0 rounded-full bg-ink"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                />
+              )}
+              <span className="relative">{l.label}</span>
             </Link>
-          )}
+          ))}
         </div>
 
-        {/* Auth Section */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden items-center gap-2 md:flex">
           {isLoading ? (
-            <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
+            <div className="h-9 w-28 animate-pulse rounded-full bg-muted" />
           ) : session?.user ? (
-            <div className="flex items-center gap-4">
-              <Link href="/settings" className="flex items-center gap-2">
+            <>
+              <Link
+                href="/settings"
+                className="flex items-center gap-2 rounded-full py-1 ps-1 pe-3 hover:bg-secondary"
+              >
                 <Avatar
                   src={session.user.avatar}
                   fallback={session.user.name || "U"}
                   size="sm"
                 />
-                <span className="text-sm font-medium">{session.user.name}</span>
+                <span className="text-[14px] font-medium">
+                  {session.user.name}
+                </span>
               </Link>
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon-sm"
+                aria-label="Log out"
                 onClick={() => signOut({ callbackUrl: "/" })}
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut />
               </Button>
-            </div>
+            </>
           ) : (
             <>
-              <Link href="/login">
-                <Button variant="ghost" size="sm">
-                  Log in
-                </Button>
+              <Link
+                href="/login"
+                className="rounded-full px-3.5 py-1.5 text-[14px] font-medium text-ink/75 hover:text-ink"
+              >
+                Log in
               </Link>
-              <Link href="/register">
-                <Button size="sm">Sign up</Button>
+              <Link
+                href="/register"
+                className="rounded-full bg-forest px-4 py-2 text-[14px] font-semibold text-paper transition hover:bg-forest-deep"
+              >
+                Start learning
               </Link>
             </>
           )}
         </div>
 
-        {/* Mobile Menu Button */}
         <Button
           variant="ghost"
           size="icon"
           className="md:hidden"
+          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMenuOpen}
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
-          {isMenuOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
+          {isMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
         </Button>
       </div>
 
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden border-t">
-          <div className="container mx-auto px-4 py-4 space-y-4">
-            <Link
-              href="/courses"
-              className="flex items-center gap-2 text-sm font-medium"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <BookOpen className="h-4 w-4" />
-              Browse Courses
-            </Link>
-
-            {session?.user && (
-              <>
+      <AnimatePresence initial={false}>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden border-t border-border/70 md:hidden"
+          >
+            <div className="mx-auto max-w-6xl space-y-1 px-5 py-4">
+              {[
+                ...links,
+                ...(session?.user
+                  ? [{ href: "/settings", label: "Settings" }]
+                  : []),
+              ].map((l) => (
                 <Link
-                  href="/dashboard"
-                  className="flex items-center gap-2 text-sm font-medium"
+                  key={l.href}
+                  href={l.href}
                   onClick={() => setIsMenuOpen(false)}
+                  className={cn(
+                    "block rounded-xl px-3 py-2.5 text-[15px] font-medium",
+                    isActive(l.href)
+                      ? "bg-ink text-paper"
+                      : "hover:bg-secondary",
+                  )}
                 >
-                  <LayoutDashboard className="h-4 w-4" />
-                  Dashboard
+                  {l.label}
                 </Link>
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-2 text-sm font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <User className="h-4 w-4" />
-                  Profile
-                </Link>
-                <Link
-                  href="/settings"
-                  className="flex items-center gap-2 text-sm font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Link>
-              </>
-            )}
-
-            <div className="pt-4 border-t">
-              {session?.user ? (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Log out
-                </Button>
-              ) : (
-                <div className="space-y-2">
-                  <Link href="/login" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="outline" className="w-full">
-                      Log in
-                    </Button>
-                  </Link>
-                  <Link href="/register" onClick={() => setIsMenuOpen(false)}>
-                    <Button className="w-full">Sign up</Button>
-                  </Link>
-                </div>
-              )}
+              ))}
+              <div className="pt-3">
+                {session?.user ? (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                  >
+                    <LogOut />
+                    Log out
+                  </Button>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="outline" className="w-full">
+                        Log in
+                      </Button>
+                    </Link>
+                    <Link href="/register" onClick={() => setIsMenuOpen(false)}>
+                      <Button className="w-full">Start learning</Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

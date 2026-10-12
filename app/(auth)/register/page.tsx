@@ -6,18 +6,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export default function RegisterPage() {
   const router = useRouter();
-  
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -28,7 +20,9 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -79,107 +73,109 @@ export default function RegisterPage() {
     }
   };
 
+  const field = (
+    id: keyof typeof formData,
+    label: string,
+    type: string,
+    placeholder: string,
+    autoComplete: string,
+  ) => (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        name={id}
+        type={type}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        value={formData[id]}
+        onChange={handleChange}
+        required
+        disabled={isLoading}
+      />
+    </div>
+  );
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            Create an account
-          </CardTitle>
-          <CardDescription className="text-center">
-            Join our learning platform today
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {error && (
-              <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
-                {error}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                placeholder="John Doe"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="name@example.com"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">I want to</Label>
-              <select
-                id="role"
+    <div className="w-full max-w-[400px]">
+      <h1 className="font-display text-[44px] leading-none">Start learning</h1>
+      <p className="mt-3 text-[15px] text-muted-foreground">
+        A free account saves your progress, quizzes and certificates.
+      </p>
+
+      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+        {error && (
+          <div className="rounded-xl bg-clay/10 p-3 text-[14px] text-clay">
+            {error}
+          </div>
+        )}
+
+        <fieldset className="grid grid-cols-2 gap-2" disabled={isLoading}>
+          <legend className="sr-only">I want to</legend>
+          {[
+            ["STUDENT", "Learn", "Take courses"],
+            ["INSTRUCTOR", "Teach", "Curate courses"],
+          ].map(([value, title, hint]) => (
+            <label
+              key={value}
+              className={`cursor-pointer rounded-xl border p-3 transition ${
+                formData.role === value
+                  ? "border-forest bg-accent"
+                  : "border-border bg-card hover:border-ink/30"
+              }`}
+            >
+              <input
+                type="radio"
                 name="role"
-                value={formData.role}
+                value={value}
+                checked={formData.role === value}
                 onChange={handleChange}
-                disabled={isLoading}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="STUDENT">Learn - I&apos;m a student</option>
-                <option value="INSTRUCTOR">Teach - I&apos;m an instructor</option>
-              </select>
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Create account"}
-            </Button>
-            <p className="text-sm text-center text-gray-600">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Sign in
-              </Link>
-            </p>
-          </CardFooter>
-        </form>
-      </Card>
+                className="sr-only"
+              />
+              <span className="block text-[15px] font-semibold">{title}</span>
+              <span className="block text-[12.5px] text-muted-foreground">
+                {hint}
+              </span>
+            </label>
+          ))}
+        </fieldset>
+
+        {field("name", "Full name", "text", "Nour Hassan", "name")}
+        {field("email", "Email", "email", "name@example.com", "email")}
+        {field(
+          "password",
+          "Password",
+          "password",
+          "At least 8 characters",
+          "new-password",
+        )}
+        {field(
+          "confirmPassword",
+          "Confirm password",
+          "password",
+          "••••••••",
+          "new-password",
+        )}
+
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full rounded-full"
+          disabled={isLoading}
+        >
+          {isLoading ? "Creating account…" : "Create account"}
+        </Button>
+      </form>
+
+      <p className="mt-8 text-[14px] text-muted-foreground">
+        Already have an account?{" "}
+        <Link
+          href="/login"
+          className="font-semibold text-forest hover:underline"
+        >
+          Sign in
+        </Link>
+      </p>
     </div>
   );
 }

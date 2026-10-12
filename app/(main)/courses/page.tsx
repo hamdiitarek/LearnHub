@@ -1,222 +1,197 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+  CourseCard,
+  type CourseSummary,
+} from "@/components/course/course-card";
+import { levelLabel, plural } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  thumbnail: string | null;
-  price: number;
-  level: string;
-  category: string;
-  instructor: {
-    name: string;
-  };
-  _count: {
-    lessons: number;
-    enrollments: number;
-  };
-}
+const LEVELS = ["BEGINNER", "INTERMEDIATE", "ADVANCED"];
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [courses, setCourses] = useState<CourseSummary[]>([]);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
   const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [level, setLevel] = useState("");
+  // Loading = the filters on screen haven't come back from the API yet.
+  const requestKey = `${query}|${category}|${level}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const isLoading = loadedKey !== requestKey;
+
+  // Debounce typing so every keystroke doesn't hit the API.
+  useEffect(() => {
+    const id = setTimeout(() => setQuery(search.trim()), 250);
+    return () => clearTimeout(id);
+  }, [search]);
 
   useEffect(() => {
-    fetchCourses();
-  }, [search, category, level]);
+    const controller = new AbortController();
+    const params = new URLSearchParams({ limit: "48" });
+    if (query) params.append("search", query);
+    if (category) params.append("category", category);
+    if (level) params.append("level", level);
+    fetch(`/api/courses?${params}`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        const list: CourseSummary[] = data.courses || [];
+        setCourses(list);
+        // Remember categories from the unfiltered list so the chips don't disappear while filtering.
+        if (!query && !category && !level) {
+          setAllCategories(
+            [
+              ...new Set(
+                list.map((c) => c.category).filter(Boolean) as string[],
+              ),
+            ].sort(),
+          );
+        }
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError")
+          console.error("Failed to fetch courses:", e);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadedKey(requestKey);
+      });
+    return () => controller.abort();
+  }, [query, category, level, requestKey]);
 
-  const fetchCourses = async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search) params.append("search", search);
-      if (category) params.append("category", category);
-      if (level) params.append("level", level);
-
-      const response = await fetch(`/api/courses?${params.toString()}`);
-      const data = await response.json();
-      setCourses(data.courses || []);
-    } catch (error) {
-      console.error("Failed to fetch courses:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const categories = [
-    "Programming",
-    "Web Development",
-    "Mobile Development",
-    "Data Science",
-    "Machine Learning",
-    "Design",
-    "Business",
-    "Marketing",
-  ];
-
-  const levels = ["BEGINNER", "INTERMEDIATE", "ADVANCED"];
-
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case "BEGINNER":
-        return "bg-green-100 text-green-800";
-      case "INTERMEDIATE":
-        return "bg-yellow-100 text-yellow-800";
-      case "ADVANCED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  const filtered = useMemo(
+    () => Boolean(query || category || level),
+    [query, category, level],
+  );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Browse Courses</h1>
-        <p className="text-gray-600">
-          Discover courses to help you achieve your goals
-        </p>
-      </div>
+    <div className="mx-auto max-w-6xl px-5 py-12">
+      <h1 className="font-display text-[clamp(2.6rem,5vw,4rem)] leading-none">
+        Courses
+      </h1>
+      <p className="mt-3 max-w-xl text-[16px] text-muted-foreground">
+        Every course is a path of complete lectures in a deliberate order, with
+        quizzes along the way.
+      </p>
 
-      {/* Filters */}
-      <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
-        <div className="grid md:grid-cols-4 gap-4">
-          <div>
-            <Input
-              placeholder="Search courses..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <select
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">All Levels</option>
-              {levels.map((lvl) => (
-                <option key={lvl} value={lvl}>
-                  {lvl.charAt(0) + lvl.slice(1).toLowerCase()}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearch("");
-                setCategory("");
-                setLevel("");
-              }}
-              className="w-full"
-            >
-              Clear Filters
-            </Button>
-          </div>
+      <div className="mt-8 flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 md:flex-row md:items-center">
+        <div className="relative md:w-80">
+          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search courses"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-10 rounded-full ps-9"
+            aria-label="Search courses"
+          />
         </div>
+        <div className="-mx-1 no-scrollbar flex gap-1.5 overflow-x-auto px-1 md:flex-1">
+          {["", ...allCategories].map((cat) => (
+            <button
+              key={cat || "all"}
+              onClick={() => setCategory(cat)}
+              className={cn(
+                "relative shrink-0 rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition-colors",
+                category === cat
+                  ? "text-paper"
+                  : "bg-secondary text-ink/75 hover:text-ink",
+              )}
+            >
+              {category === cat && (
+                <motion.span
+                  layoutId="category-pill"
+                  className="absolute inset-0 rounded-full bg-ink"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                />
+              )}
+              <span className="relative">{cat || "All subjects"}</span>
+            </button>
+          ))}
+        </div>
+        <select
+          value={level}
+          onChange={(e) => setLevel(e.target.value)}
+          aria-label="Level"
+          className="h-10 rounded-full border border-input bg-background px-4 text-[14px]"
+        >
+          <option value="">Any level</option>
+          {LEVELS.map((l) => (
+            <option key={l} value={l}>
+              {levelLabel(l)}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Course Grid */}
-      {isLoading ? (
-        <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {[...Array(8)].map((_, i) => (
+      <div className="mt-6 flex items-center justify-between text-[14px] text-muted-foreground">
+        <span>{isLoading ? "Loading…" : plural(courses.length, "course")}</span>
+        {filtered && (
+          <button
+            onClick={() => {
+              setSearch("");
+              setCategory("");
+              setLevel("");
+            }}
+            className="inline-flex items-center gap-1 font-medium text-forest hover:underline"
+          >
+            <X className="size-3.5" /> Clear filters
+          </button>
+        )}
+      </div>
+
+      {isLoading && courses.length === 0 ? (
+        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className="bg-gray-200 animate-pulse rounded-lg h-80"
+              className="h-[360px] animate-pulse rounded-2xl bg-secondary"
             />
           ))}
         </div>
       ) : courses.length === 0 ? (
-        <div className="text-center py-12">
-          <h3 className="text-xl font-semibold mb-2">No courses found</h3>
-          <p className="text-gray-600">
-            Try adjusting your filters or search terms
+        <div className="mt-6 rounded-2xl border border-dashed border-border py-16 text-center">
+          <p className="font-display text-[28px]">Nothing on that shelf yet</p>
+          <p className="mt-2 text-muted-foreground">
+            Try another subject or a shorter search.
           </p>
         </div>
       ) : (
-        <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {courses.map((course) => (
-            <Link key={course.id} href={`/courses/${course.id}`}>
-              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
-                <div className="aspect-video bg-gray-100 rounded-t-lg overflow-hidden">
-                  {course.thumbnail ? (
-                    <img
-                      src={course.thumbnail}
-                      alt={course.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-                      <span className="text-white text-4xl font-bold">
-                        {course.title.charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="secondary">{course.category}</Badge>
-                    <Badge className={getLevelColor(course.level)}>
-                      {course.level.charAt(0) + course.level.slice(1).toLowerCase()}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-lg line-clamp-2">
-                    {course.title}
-                  </CardTitle>
-                  <CardDescription className="text-sm">
-                    by {course.instructor.name}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <p className="text-sm text-gray-600 line-clamp-2">
-                    {course.description}
-                  </p>
-                </CardContent>
-                <CardFooter className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    {course._count.lessons} lessons • {course._count.enrollments}{" "}
-                    students
-                  </div>
-                  <div className="font-bold text-blue-600">
-                    {course.price === 0 ? "Free" : `$${course.price}`}
-                  </div>
-                </CardFooter>
-              </Card>
-            </Link>
-          ))}
+        <div
+          className={cn(
+            "mt-6 grid gap-6 transition-opacity sm:grid-cols-2 lg:grid-cols-3",
+            isLoading && "opacity-60",
+          )}
+        >
+          <AnimatePresence mode="popLayout" initial={false}>
+            {courses.map((course, i) => (
+              <motion.div
+                key={course.id}
+                layout
+                initial={{ opacity: 0, y: 24 }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: 0.5,
+                    ease: [0.22, 1, 0.36, 1],
+                    delay: Math.min(i, 8) * 0.04,
+                  },
+                }}
+                exit={{
+                  opacity: 0,
+                  scale: 0.96,
+                  transition: { duration: 0.2 },
+                }}
+                transition={{ type: "spring", stiffness: 260, damping: 30 }}
+              >
+                <CourseCard course={course} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>

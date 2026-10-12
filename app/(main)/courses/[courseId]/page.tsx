@@ -1,48 +1,45 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { BadgeCheck, CirclePlay, ListChecks, Lock, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PageMotion } from "@/components/motion/page-motion";
 import { Progress } from "@/components/ui/progress";
 import { ReviewForm } from "@/components/review/review-form";
+import { CourseCover } from "@/components/course/course-cover";
+import { formatDuration, levelLabel, plural } from "@/lib/format";
 
 interface Lesson {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
   duration: number;
   order: number;
   isFree: boolean;
+  videoUrl: string | null;
+  quiz: { id: string; title: string; _count: { questions: number } } | null;
 }
 
 interface Review {
   id: string;
   rating: number;
-  comment: string;
-  user: {
-    name: string;
-  };
+  comment: string | null;
+  user: { id?: string; name: string };
   createdAt: string;
 }
 
 interface Course {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
+  shortDescription: string | null;
   thumbnail: string | null;
   price: number;
   level: string;
-  category: string;
+  category: string | null;
   status: string;
   instructor: {
     id: string;
@@ -51,13 +48,9 @@ interface Course {
     bio?: string | null;
   };
   lessons: Lesson[];
-  _count: {
-    enrollments: number;
-    reviews: number;
-  };
+  _count: { enrollments: number; reviews: number };
   avgRating?: number;
   totalDuration?: number;
-  isEnrolled?: boolean;
   isOwner?: boolean;
 }
 
@@ -66,15 +59,32 @@ interface Enrollment {
   progress: number;
 }
 
-interface ReviewStats {
-  averageRating: number;
-  totalReviews: number;
+/** "Summary.\n\nLecture: “Title” by Channel, on YouTube." → parts */
+function splitLesson(description: string | null) {
+  const [summary, ...rest] = (description ?? "").split(/\n\n(?=Lecture: )/);
+  return {
+    summary: summary.trim(),
+    credit: rest
+      .join("")
+      .replace(/^Lecture: /, "")
+      .trim(),
+  };
 }
 
-interface UserReview {
-  id: string;
-  rating: number;
-  comment: string | null;
+function Stars({ value, size = "size-4" }: { value: number; size?: string }) {
+  return (
+    <span
+      className="flex items-center gap-0.5"
+      aria-label={`${value.toFixed(1)} out of 5`}
+    >
+      {[1, 2, 3, 4, 5].map((s) => (
+        <Star
+          key={s}
+          className={`${size} ${s <= Math.round(value) ? "fill-[#e0a400] text-[#e0a400]" : "text-ink/20"}`}
+        />
+      ))}
+    </span>
+  );
 }
 
 export default function CourseDetailPage({
@@ -82,34 +92,23 @@ export default function CourseDetailPage({
 }: {
   params: Promise<{ courseId: string }>;
 }) {
-  const resolvedParams = use(params);
+  const { courseId } = use(params);
   const { data: session } = useSession();
   const router = useRouter();
-  
+
   const [course, setCourse] = useState<Course | null>(null);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
-  const [userReview, setUserReview] = useState<UserReview | null>(null);
+  const [stats, setStats] = useState({ averageRating: 0, totalReviews: 0 });
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isEnrolling, setIsEnrolling] = useState(false);
 
-  useEffect(() => {
-    fetchCourse();
-    fetchReviews();
-  }, [resolvedParams.courseId]);
-
-  const fetchCourse = async () => {
+  const fetchCourse = useCallback(async () => {
     try {
-      const response = await fetch(`/api/courses/${resolvedParams.courseId}`);
-      if (!response.ok) {
-        router.push("/courses");
-        return;
-      }
+      const response = await fetch(`/api/courses/${courseId}`);
       const data = await response.json();
-      // API returns course data directly, not nested under .course
-      if (data.error) {
+      if (!response.ok || data.error) {
         router.push("/courses");
         return;
       }
@@ -120,55 +119,50 @@ export default function CourseDetailPage({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [courseId, router]);
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
-      const response = await fetch(
-        `/api/reviews?courseId=${resolvedParams.courseId}`
-      );
+      const response = await fetch(`/api/reviews?courseId=${courseId}`);
       const data = await response.json();
       setReviews(data.reviews || []);
-      if (data.stats) {
-        setReviewStats({
+      if (data.stats)
+        setStats({
           averageRating: data.stats.avgRating || 0,
           totalReviews: data.stats.totalReviews || 0,
         });
-      }
-      
-      // Check if current user has a review
-      if (session?.user) {
-        const userReviewData = data.reviews?.find(
-          (r: Review & { user: { id?: string } }) => r.user?.id === session.user.id
-        );
-        if (userReviewData) {
-          setUserReview({
-            id: userReviewData.id,
-            rating: userReviewData.rating,
-            comment: userReviewData.comment,
-          });
-        }
-      }
     } catch (error) {
       console.error("Failed to fetch reviews:", error);
     }
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    fetchCourse();
+    fetchReviews();
+  }, [fetchCourse, fetchReviews]);
+
+  // Re-fetch once the session resolves so enrolment and "your review" are right.
+  useEffect(() => {
+    if (session?.user) fetchCourse();
+  }, [session?.user, fetchCourse]);
+
+  const userReview =
+    reviews.find((r) => r.user?.id && r.user.id === session?.user?.id) ?? null;
 
   const handleEnroll = async () => {
     if (!session) {
-      router.push(`/login?callbackUrl=/courses/${resolvedParams.courseId}`);
+      router.push(`/login?callbackUrl=/courses/${courseId}`);
       return;
     }
-
     setIsEnrolling(true);
     try {
-      const response = await fetch(`/api/courses/${resolvedParams.courseId}/enroll`, {
+      const response = await fetch(`/api/courses/${courseId}/enroll`, {
         method: "POST",
       });
-
       if (response.ok) {
         const data = await response.json();
         setEnrollment(data.enrollment);
+        fetchCourse();
       }
     } catch (error) {
       console.error("Failed to enroll:", error);
@@ -177,35 +171,13 @@ export default function CourseDetailPage({
     }
   };
 
-  const formatDuration = (minutes: number) => {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
-  };
-
-  const totalDuration = course?.lessons?.reduce((acc, l) => acc + (l.duration || 0), 0) || 0;
-
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case "BEGINNER":
-        return "bg-green-100 text-green-800";
-      case "INTERMEDIATE":
-        return "bg-yellow-100 text-yellow-800";
-      case "ADVANCED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/2 mb-4" />
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-8" />
-          <div className="h-64 bg-gray-200 rounded mb-8" />
+      <div className="mx-auto max-w-6xl px-5 py-12">
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 w-2/3 rounded-xl bg-secondary" />
+          <div className="h-5 w-1/3 rounded bg-secondary" />
+          <div className="mt-8 h-72 rounded-2xl bg-secondary" />
         </div>
       </div>
     );
@@ -213,350 +185,322 @@ export default function CourseDetailPage({
 
   if (!course) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h1 className="text-2xl font-bold mb-4">Course not found</h1>
-        <Link href="/courses">
-          <Button>Browse Courses</Button>
+      <div className="mx-auto max-w-6xl px-5 py-20 text-center">
+        <h1 className="font-display text-[40px]">Course not found</h1>
+        <Link
+          href="/courses"
+          className="mt-6 inline-block text-forest underline"
+        >
+          Browse courses
         </Link>
       </div>
     );
   }
 
+  const lessons = [...(course.lessons || [])].sort((a, b) => a.order - b.order);
+  const totalDuration = lessons.reduce((acc, l) => acc + (l.duration || 0), 0);
+  const quizCount = lessons.filter((l) => l.quiz).length;
+  const freeCount = lessons.filter((l) => l.isFree).length;
+  const canPreview = (l: Lesson) => Boolean(l.videoUrl);
+
   return (
-    <div className="bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <Badge variant="secondary">{course.category}</Badge>
-                <Badge className={getLevelColor(course.level)}>
-                  {course.level.charAt(0) + course.level.slice(1).toLowerCase()}
-                </Badge>
-              </div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                {course.title}
-              </h1>
-              <p className="text-xl text-blue-100 mb-4">{course.description}</p>
-              <div className="flex items-center gap-4 text-blue-100 flex-wrap">
-                <span>by {course.instructor?.name || "Unknown"}</span>
-                <span>•</span>
-                <span>{course._count?.enrollments || 0} students</span>
-                <span>•</span>
-                <span>{course.lessons?.length || 0} lessons</span>
-                <span>•</span>
-                <span>{formatDuration(totalDuration)}</span>
-              </div>
-              {reviewStats && reviewStats.totalReviews > 0 && (
-                <div className="flex items-center gap-2 mt-4">
-                  <div className="flex items-center">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <svg
-                        key={star}
-                        className={`w-5 h-5 ${
-                          star <= Math.round(reviewStats.averageRating)
-                            ? "text-yellow-400"
-                            : "text-gray-300"
-                        }`}
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
+    <PageMotion watch={`${course.id}-${lessons.length}`}>
+      {/* ------------------------------------------------------------ header */}
+      <section className="border-b border-border">
+        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 lg:grid-cols-[1.35fr_1fr] lg:py-16">
+          <div>
+            <p className="text-[13px] font-semibold tracking-[0.12em] text-forest uppercase">
+              {course.category} · {levelLabel(course.level)}
+            </p>
+            <h1 className="mt-4 font-display text-[clamp(2.6rem,5.4vw,4.4rem)] leading-[0.98]">
+              {course.title}
+            </h1>
+            {course.shortDescription && (
+              <p className="mt-5 max-w-2xl text-[18px] leading-relaxed text-ink/75">
+                {course.shortDescription}
+              </p>
+            )}
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px] text-muted-foreground">
+              {stats.totalReviews > 0 && (
+                <span className="flex items-center gap-2 text-ink">
+                  <Stars value={stats.averageRating} />
+                  <strong>{stats.averageRating.toFixed(1)}</strong>
+                  <span className="text-muted-foreground">
+                    ({plural(stats.totalReviews, "review")})
+                  </span>
+                </span>
+              )}
+              <span>{plural(course._count?.enrollments || 0, "learner")}</span>
+              <span>Curated by {course.instructor?.name}</span>
+            </div>
+          </div>
+
+          <aside className="lg:row-span-2">
+            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_30px_60px_-40px_rgb(18_32_26/0.5)] lg:sticky lg:top-24">
+              <CourseCover
+                title={course.title}
+                category={course.category}
+                thumbnail={course.thumbnail}
+                lessons={lessons.length}
+                seconds={totalDuration}
+              />
+              <div className="p-6">
+                <div className="flex items-baseline justify-between">
+                  <span className="font-display text-[36px] leading-none">
+                    {course.price ? `$${course.price}` : "Free"}
+                  </span>
+                  {course.status !== "PUBLISHED" && (
+                    <span className="rounded-full bg-secondary px-2.5 py-1 text-[12px] font-semibold">
+                      {levelLabel(course.status)}
+                    </span>
+                  )}
+                </div>
+                {enrollment ? (
+                  <div className="mt-5 space-y-4">
+                    <div>
+                      <div className="mb-2 flex justify-between text-[14px]">
+                        <span>Your progress</span>
+                        <span className="font-semibold">
+                          {Math.round(enrollment.progress || 0)}%
+                        </span>
+                      </div>
+                      <Progress value={enrollment.progress || 0} />
+                    </div>
+                    <Link href={`/courses/${course.id}/learn`}>
+                      <Button className="w-full rounded-full" size="lg">
+                        {enrollment.progress >= 100
+                          ? "Review the course"
+                          : enrollment.progress > 0
+                            ? "Continue learning"
+                            : "Start the first lesson"}
+                      </Button>
+                    </Link>
                   </div>
-                  <span className="font-semibold">
-                    {reviewStats.averageRating.toFixed(1)}
-                  </span>
-                  <span className="text-blue-200">
-                    ({reviewStats.totalReviews} reviews)
-                  </span>
+                ) : (
+                  <Button
+                    className="mt-5 w-full rounded-full"
+                    size="lg"
+                    onClick={handleEnroll}
+                    disabled={isEnrolling}
+                  >
+                    {isEnrolling
+                      ? "Enrolling…"
+                      : session
+                        ? "Enrol for free"
+                        : "Sign in to enrol"}
+                  </Button>
+                )}
+                <ul className="mt-6 space-y-3 text-[14px]">
+                  <li className="flex items-center gap-3">
+                    <CirclePlay className="size-4 text-forest" />
+                    {plural(lessons.length, "complete lecture")},{" "}
+                    {formatDuration(totalDuration)}
+                  </li>
+                  {quizCount > 0 && (
+                    <li className="flex items-center gap-3">
+                      <ListChecks className="size-4 text-forest" />
+                      {plural(quizCount, "quiz")}, retake as often as you like
+                    </li>
+                  )}
+                  <li className="flex items-center gap-3">
+                    <BadgeCheck className="size-4 text-forest" />
+                    Certificate when you finish every lesson
+                  </li>
+                  {freeCount > 0 && !enrollment && (
+                    <li className="flex items-center gap-3 text-muted-foreground">
+                      <Lock className="size-4" />
+                      {plural(freeCount, "lesson")} open to preview
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </aside>
+
+          {/* ------------------------------------------------------------ body */}
+          <div className="space-y-14">
+            {course.description && (
+              <div>
+                <h2 className="font-display text-[30px]">About this course</h2>
+                <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink/80">
+                  {course.description}
+                </p>
+              </div>
+            )}
+
+            <div>
+              <div className="flex items-baseline justify-between gap-4">
+                <h2 className="font-display text-[30px]">The path</h2>
+                <span className="text-[14px] text-muted-foreground">
+                  {plural(lessons.length, "lesson")} ·{" "}
+                  {formatDuration(totalDuration)}
+                </span>
+              </div>
+              <div
+                data-path
+                className="relative mt-5 overflow-hidden rounded-2xl border border-border bg-card"
+              >
+                {/* fills down the list as you scroll (GSAP, components/motion/page-motion.tsx) */}
+                <span
+                  data-path-line
+                  className="absolute inset-y-0 start-0 w-[3px] origin-top bg-forest"
+                  aria-hidden
+                />
+                <ol className="divide-y divide-border">
+                  {lessons.map((lesson, index) => {
+                    const { summary, credit } = splitLesson(lesson.description);
+                    const open = canPreview(lesson);
+                    return (
+                      <li key={lesson.id} className="flex gap-4 p-5">
+                        <span
+                          data-path-dot
+                          className="w-7 shrink-0 font-display text-[22px] leading-6 text-ink/35"
+                        >
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <h3 className="text-[16px] font-semibold">
+                              {lesson.title}
+                            </h3>
+                            {lesson.quiz && (
+                              <span className="rounded-full bg-highlight px-2 py-0.5 text-[11px] font-semibold">
+                                Quiz
+                              </span>
+                            )}
+                            {lesson.isFree && !enrollment && (
+                              <span className="rounded-full border border-forest/30 px-2 py-0.5 text-[11px] font-semibold text-forest">
+                                Free preview
+                              </span>
+                            )}
+                          </div>
+                          {summary && (
+                            <p className="mt-1 text-[14px] text-muted-foreground">
+                              {summary}
+                            </p>
+                          )}
+                          {credit && (
+                            <p className="mt-1.5 text-[12.5px] text-ink/55">
+                              {credit}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1 text-[13px] text-muted-foreground">
+                          <span>{formatDuration(lesson.duration)}</span>
+                          {!open && (
+                            <Lock
+                              className="size-3.5"
+                              aria-label="Enrol to watch"
+                            />
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            </div>
+
+            {course.instructor && (
+              <div className="flex gap-4 rounded-2xl border border-border bg-card p-6">
+                <div className="grid size-12 shrink-0 place-items-center rounded-full bg-forest text-[18px] font-semibold text-paper">
+                  {course.instructor.name.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-[12px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                    Curated by
+                  </p>
+                  <p className="mt-1 text-[17px] font-semibold">
+                    {course.instructor.name}
+                  </p>
+                  {course.instructor.bio && (
+                    <p className="mt-1.5 text-[14px] text-muted-foreground">
+                      {course.instructor.bio}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <div className="flex items-baseline justify-between gap-4">
+                <h2 className="font-display text-[30px]">What learners say</h2>
+                {enrollment && !showReviewForm && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => setShowReviewForm(true)}
+                  >
+                    {userReview ? "Edit your review" : "Write a review"}
+                  </Button>
+                )}
+              </div>
+
+              {showReviewForm && enrollment && (
+                <div className="mt-5 rounded-2xl border border-border bg-card p-5">
+                  <ReviewForm
+                    courseId={course.id}
+                    existingReview={
+                      userReview
+                        ? {
+                            id: userReview.id,
+                            rating: userReview.rating,
+                            comment: userReview.comment,
+                          }
+                        : null
+                    }
+                    onSuccess={() => {
+                      setShowReviewForm(false);
+                      fetchReviews();
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowReviewForm(false)}
+                    className="mt-2"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+
+              {reviews.length === 0 ? (
+                <p className="mt-5 rounded-2xl border border-dashed border-border py-10 text-center text-muted-foreground">
+                  No reviews yet.
+                </p>
+              ) : (
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  {reviews.map((review) => (
+                    <figure
+                      key={review.id}
+                      className="rounded-2xl border border-border bg-card p-5"
+                    >
+                      <Stars value={review.rating} size="size-3.5" />
+                      {review.comment && (
+                        <blockquote className="mt-3 text-[15px] leading-relaxed">
+                          “{review.comment}”
+                        </blockquote>
+                      )}
+                      <figcaption className="mt-4 flex items-center gap-2 text-[13px] text-muted-foreground">
+                        <span className="grid size-7 place-items-center rounded-full bg-secondary text-[12px] font-semibold text-ink">
+                          {review.user?.name?.charAt(0) || "?"}
+                        </span>
+                        {review.user?.name || "Anonymous"} ·{" "}
+                        {new Date(review.createdAt).toLocaleDateString(
+                          "en-GB",
+                          { day: "numeric", month: "short", year: "numeric" },
+                        )}
+                      </figcaption>
+                    </figure>
+                  ))}
                 </div>
               )}
             </div>
-            <div className="lg:col-span-1">
-              <Card className="bg-white text-gray-900">
-                <CardHeader>
-                  {course.thumbnail ? (
-                    <img
-                      src={course.thumbnail}
-                      alt={course.title}
-                      className="w-full aspect-video object-cover rounded-lg mb-4"
-                    />
-                  ) : (
-                    <div className="w-full aspect-video bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg mb-4 flex items-center justify-center">
-                      <span className="text-white text-6xl font-bold">
-                        {course.title.charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                  <CardTitle className="text-3xl">
-                    {course.price == null || course.price === 0 ? "Free" : `$${course.price}`}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {enrollment ? (
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between text-sm mb-2">
-                          <span>Your Progress</span>
-                          <span>{Math.round(enrollment.progress || 0)}%</span>
-                        </div>
-                        <Progress value={enrollment.progress || 0} />
-                      </div>
-                      <Link href={`/courses/${course.id}/learn`}>
-                        <Button className="w-full" size="lg">
-                          Continue Learning
-                        </Button>
-                      </Link>
-                    </div>
-                  ) : (
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      onClick={handleEnroll}
-                      disabled={isEnrolling}
-                    >
-                      {isEnrolling ? "Enrolling..." : "Enroll Now"}
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
           </div>
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            {/* Course Content */}
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle>Course Content</CardTitle>
-                <CardDescription>
-                  {course.lessons?.length || 0} lessons •{" "}
-                  {formatDuration(totalDuration)} total length
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {(course.lessons || [])
-                    .sort((a, b) => a.order - b.order)
-                    .map((lesson, index) => (
-                      <div
-                        key={lesson.id}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex items-center gap-4">
-                          <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
-                            {index + 1}
-                          </span>
-                          <div>
-                            <h4 className="font-medium">{lesson.title}</h4>
-                            {lesson.description && (
-                              <p className="text-sm text-gray-500">
-                                {lesson.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {lesson.isFree && (
-                            <Badge variant="secondary">Free Preview</Badge>
-                          )}
-                          <span className="text-sm text-gray-500">
-                            {formatDuration(lesson.duration)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Reviews */}
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>Student Reviews</CardTitle>
-                    {reviewStats && reviewStats.totalReviews > 0 && (
-                      <CardDescription>
-                        {reviewStats.averageRating.toFixed(1)} average rating •{" "}
-                        {reviewStats.totalReviews} reviews
-                      </CardDescription>
-                    )}
-                  </div>
-                  {enrollment && !showReviewForm && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowReviewForm(true)}
-                    >
-                      {userReview ? "Edit Review" : "Write Review"}
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Review Form */}
-                {showReviewForm && enrollment && (
-                  <div className="mb-6">
-                    <ReviewForm
-                      courseId={course.id}
-                      existingReview={userReview}
-                      onSuccess={() => {
-                        setShowReviewForm(false);
-                        fetchReviews();
-                      }}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowReviewForm(false)}
-                      className="mt-2"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                )}
-
-                {reviews.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No reviews yet. Be the first to review!
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {reviews.map((review) => (
-                      <div
-                        key={review.id}
-                        className="border-b pb-4 last:border-0"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-blue-600 font-semibold">
-                                {review.user?.name?.charAt(0) || "?"}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium">{review.user?.name || "Anonymous"}</p>
-                              <p className="text-sm text-gray-500">
-                                {new Date(review.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <svg
-                                key={star}
-                                className={`w-4 h-4 ${
-                                  star <= review.rating
-                                    ? "text-yellow-400"
-                                    : "text-gray-300"
-                                }`}
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                            ))}
-                          </div>
-                        </div>
-                        {review.comment && (
-                          <p className="text-gray-600">{review.comment}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle>What you&apos;ll learn</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <svg
-                      className="w-5 h-5 text-green-500 mt-0.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <span>
-                      Comprehensive understanding of {course.category}
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <svg
-                      className="w-5 h-5 text-green-500 mt-0.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <span>Hands-on practical exercises</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <svg
-                      className="w-5 h-5 text-green-500 mt-0.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <span>Certificate of completion</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <svg
-                      className="w-5 h-5 text-green-500 mt-0.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <span>Lifetime access</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
+      </section>
+    </PageMotion>
   );
 }
