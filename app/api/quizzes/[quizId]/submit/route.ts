@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { submitQuizSchema } from "@/lib/validations";
 
 // POST /api/quizzes/[quizId]/submit - Submit quiz attempt
@@ -117,7 +118,7 @@ export async function POST(
         userId: session.user.id,
         score: Math.round(scorePercentage * 100) / 100,
         passed,
-        answers: gradedAnswers,
+        answers: gradedAnswers as Prisma.InputJsonValue,
         completedAt: new Date(),
       },
     });

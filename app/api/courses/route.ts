@@ -77,6 +77,11 @@ export async function GET(request: NextRequest) {
               rating: true,
             },
           },
+          lessons: {
+            select: {
+              duration: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -94,10 +99,11 @@ export async function GET(request: NextRequest) {
           : 0;
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { reviews, ...courseData } = course;
+      const { reviews, lessons, ...courseData } = course;
       return {
         ...courseData,
         avgRating: Math.round(avgRating * 10) / 10,
+        totalDuration: lessons.reduce((sum: number, l: { duration: number }) => sum + l.duration, 0),
       };
     });
 

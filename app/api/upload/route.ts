@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isDemo } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { v4 as uuidv4 } from "uuid";
@@ -16,6 +17,14 @@ export async function POST(request: NextRequest) {
     // Only instructors and admins can upload
     if (session.user.role !== "INSTRUCTOR" && session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // The public demo runs on a read-only filesystem.
+    if (isDemo) {
+      return NextResponse.json(
+        { error: "Uploads are turned off in the public demo. Paste a YouTube link instead." },
+        { status: 400 }
+      );
     }
 
     const formData = await request.formData();

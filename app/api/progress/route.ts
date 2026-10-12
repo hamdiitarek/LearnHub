@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Determine if lesson should be marked complete
     // Either explicitly marked complete or watched 90% of the duration
-    const lessonDurationSeconds = lesson.duration * 60; // Convert minutes to seconds
+    const lessonDurationSeconds = lesson.duration; // Lesson.duration is stored in seconds
     const shouldComplete = completed || (watchTime >= lessonDurationSeconds * 0.9);
 
     // Upsert progress

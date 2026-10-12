@@ -3,11 +3,14 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // PGlite (the demo database) loads its WASM build from disk at runtime,
+  // so it can't be bundled.
+  serverExternalPackages: ["@electric-sql/pglite", "pglite-prisma-adapter"],
+  outputFileTracingIncludes: {
+    "/**": ["./node_modules/@electric-sql/pglite/dist/**/*"],
+  },
   typescript: {
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
 };
 

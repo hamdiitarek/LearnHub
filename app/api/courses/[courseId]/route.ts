@@ -37,6 +37,7 @@ export async function GET(
               select: {
                 id: true,
                 title: true,
+                passingScore: true,
                 _count: {
                   select: {
                     questions: true,

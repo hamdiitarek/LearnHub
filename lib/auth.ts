@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { db } from "@/lib/db";
+import { db, isDemo } from "@/lib/db";
 
 // Define UserRole type to match the Prisma enum
 type UserRole = "STUDENT" | "INSTRUCTOR" | "ADMIN";
@@ -31,6 +31,10 @@ declare module "@auth/core/jwt" {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(db) as any,
+  // The public demo has no secrets to protect (shared demo accounts, in-memory
+  // data), so it can run without configuration. Real deployments set AUTH_SECRET.
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? (isDemo ? "learnhub-public-demo" : undefined),
+  trustHost: true,
   session: {
     strategy: "jwt",
   },
