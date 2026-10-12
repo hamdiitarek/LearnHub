@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "demo:schema": "node scripts/demo-schema.mjs"
+    "demo:schema": "node scripts/demo-schema.mjs",
+    "demo:snapshot": "npx -y tsx@4.19.2 scripts/demo-snapshot.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

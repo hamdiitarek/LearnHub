@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { SCHEMA_SQL } from "@/lib/demo/schema";
 import { seedDemo } from "@/lib/demo/seed";
 import { isDemo } from "@/lib/demo/mode";
+import { readSnapshot, shiftDatesSql } from "@/lib/demo/snapshot";
 
 /**
  * In demo mode (see lib/demo/mode.ts) LearnHub is self-contained: Postgres runs
@@ -29,11 +30,20 @@ function createClient(): PrismaClient {
     return new PrismaClient({ adapter: new PrismaPg(pool) });
   }
 
-  const pglite = new PGlite();
+  // Start from the pre-seeded snapshot when there is one (a few times faster on
+  // a cold server); otherwise create the schema and seed it.
+  const snapshot = readSnapshot();
+  const pglite = snapshot
+    ? new PGlite({ loadDataDir: snapshot.data })
+    : new PGlite();
   const base = new PrismaClient({ adapter: new PrismaPGlite(pglite) });
   const ready = (async () => {
-    await pglite.exec(SCHEMA_SQL);
-    await seedDemo(base);
+    if (snapshot) {
+      await pglite.exec(shiftDatesSql(snapshot.takenAt));
+    } else {
+      await pglite.exec(SCHEMA_SQL);
+      await seedDemo(base);
+    }
   })();
 
   // Every query waits for the schema and seed, so callers never see an empty database.

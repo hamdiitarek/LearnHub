@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
     "pglite-prisma-adapter",
     "pdfkit",
   ],
+  // The pre-seeded demo database, read from disk at startup (lib/demo/snapshot.ts).
+  outputFileTracingIncludes: {
+    "/**": ["./lib/demo/snapshot.tar.gz", "./lib/demo/snapshot.json"],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

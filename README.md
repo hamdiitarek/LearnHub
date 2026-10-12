@@ -54,10 +54,13 @@ The seed (`lib/demo/seed.ts`, deterministic so every start looks the same) conta
 
 Lessons embed the original videos from YouTube (via `youtube-nocookie.com`) and credit each creator on the lesson: freeCodeCamp.org, Traversy Media, Programming with Mosh, 3Blue1Brown, Corey Schafer, Keith Galli, TechWorld with Nana and Dr. Raj Ramesh. The videos belong to their creators; LearnHub only adds the structure around them.
 
-If you change `prisma/schema.prisma`, regenerate the demo schema with:
+To keep cold starts fast on serverless hosts, the app loads a pre-seeded copy of the demo database (`lib/demo/snapshot.tar.gz`) instead of seeding on every start, and moves its dates forward so they stay relative to today. If the snapshot is missing or out of date, it seeds from scratch.
+
+After changing `prisma/schema.prisma`, regenerate the demo schema and then the snapshot. After changing the catalogue or the seed, regenerate the snapshot:
 
 ```bash
 npm run demo:schema
+npm run demo:snapshot
 ```
 
 ## Tech stack
