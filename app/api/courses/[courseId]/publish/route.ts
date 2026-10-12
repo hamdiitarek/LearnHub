@@ -63,3 +63,46 @@ export async function POST(
     );
   }
 }
+
+// DELETE /api/courses/[courseId]/publish - Unpublish a course (back to draft)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ courseId: string }> }
+) {
+  try {
+    const { courseId } = await params;
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const course = await db.course.findUnique({ where: { id: courseId } });
+    if (!course) {
+      return NextResponse.json({ error: "Course not found" }, { status: 404 });
+    }
+
+    if (
+      course.instructorId !== session.user.id &&
+      session.user.role !== "ADMIN"
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const updatedCourse = await db.course.update({
+      where: { id: courseId },
+      data: { status: "DRAFT" },
+    });
+
+    return NextResponse.json({
+      message: "Course moved back to draft",
+      course: updatedCourse,
+    });
+  } catch (error) {
+    console.error("Unpublish course error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

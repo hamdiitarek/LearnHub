@@ -1,261 +1,244 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { motion } from "motion/react";
+import { ArrowUpRight, PenLine, Plus, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { coverColors } from "@/components/course/course-cover";
+import { formatDuration, levelLabel, plural } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 interface Course {
   id: string;
   title: string;
-  thumbnail: string | null;
-  price: number;
-  status: string;
-  category: string;
-  createdAt: string;
-  _count: {
-    lessons: number;
-    enrollments: number;
-  };
+  category: string | null;
+  level: string;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  avgRating: number;
+  totalDuration: number;
+  _count: { lessons: number; enrollments: number; reviews: number };
 }
 
-export default function InstructorDashboard() {
+const ease = [0.22, 1, 0.36, 1] as const;
+const rise = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease } },
+};
+const stagger = { show: { transition: { staggerChildren: 0.07 } } };
+
+export default function InstructorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [courses, setCourses] = useState<Course[] | null>(null);
+  const role = session?.user?.role;
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    } else if (
-      status === "authenticated" &&
-      session?.user?.role !== "INSTRUCTOR" &&
-      session?.user?.role !== "ADMIN"
-    ) {
+    if (status === "unauthenticated")
+      router.push("/login?callbackUrl=/instructor");
+    // Admins manage every course from the admin area; this page is an instructor's own shelf.
+    else if (role === "ADMIN") router.replace("/admin?tab=courses");
+    else if (status === "authenticated" && role !== "INSTRUCTOR")
       router.push("/dashboard");
-    }
-  }, [status, session, router]);
+  }, [status, role, router]);
 
   useEffect(() => {
-    if (status === "authenticated") {
-      fetchCourses();
-    }
-  }, [status]);
+    if (role !== "INSTRUCTOR") return;
+    fetch("/api/courses?my=true&limit=100")
+      .then((r) => r.json())
+      .then((data) => setCourses(data.courses ?? []))
+      .catch(() => setCourses([]));
+  }, [role]);
 
-  const fetchCourses = async () => {
-    try {
-      const response = await fetch("/api/courses?instructorOnly=true");
-      const data = await response.json();
-      setCourses(data.courses || []);
-    } catch (error) {
-      console.error("Failed to fetch courses:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const totalStudents = courses.reduce((acc, c) => acc + c._count.enrollments, 0);
-  const totalLessons = courses.reduce((acc, c) => acc + c._count.lessons, 0);
-  const publishedCourses = courses.filter((c) => c.status === "PUBLISHED");
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "PUBLISHED":
-        return <Badge className="bg-green-100 text-green-800">Published</Badge>;
-      case "DRAFT":
-        return <Badge className="bg-yellow-100 text-yellow-800">Draft</Badge>;
-      case "ARCHIVED":
-        return <Badge className="bg-gray-100 text-gray-800">Archived</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
-
-  if (status === "loading" || isLoading) {
+  if (role !== "INSTRUCTOR" || !courses) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto max-w-6xl px-5 py-12">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/4" />
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="h-12 w-1/3 rounded-xl bg-secondary" />
+          <div className="grid gap-4 md:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded" />
+              <div key={i} className="h-24 rounded-2xl bg-secondary" />
             ))}
           </div>
+          <div className="h-64 rounded-2xl bg-secondary" />
         </div>
       </div>
     );
   }
 
+  const learners = courses.reduce((s, c) => s + c._count.enrollments, 0);
+  const reviews = courses.reduce((s, c) => s + c._count.reviews, 0);
+  const rated = courses.filter((c) => c._count.reviews > 0);
+  const rating = rated.length
+    ? rated.reduce((s, c) => s + c.avgRating * c._count.reviews, 0) /
+      Math.max(1, reviews)
+    : 0;
+  const live = courses.filter((c) => c.status === "PUBLISHED").length;
+  const firstName = session?.user?.name?.split(" ")[0] ?? "there";
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="mx-auto max-w-6xl px-5 py-12">
+      <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Instructor Dashboard</h1>
-          <p className="text-gray-600">Manage your courses and track performance</p>
+          <p className="text-[12px] font-semibold tracking-[0.16em] text-forest uppercase">
+            Teaching
+          </p>
+          <h1 className="mt-2 font-display text-[clamp(2.6rem,5vw,4rem)] leading-none">
+            Your shelf, {firstName}.
+          </h1>
+          <p className="mt-3 text-[16px] text-muted-foreground">
+            The courses you curate. Drafts stay private until you publish them.
+          </p>
         </div>
         <Link href="/instructor/courses/new">
-          <Button>
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Create Course
+          <Button size="lg" className="rounded-full">
+            <Plus /> New course
           </Button>
         </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid md:grid-cols-4 gap-6 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Courses</CardDescription>
-            <CardTitle className="text-3xl">{courses.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Published</CardDescription>
-            <CardTitle className="text-3xl">{publishedCourses.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Students</CardDescription>
-            <CardTitle className="text-3xl">{totalStudents}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Lessons</CardDescription>
-            <CardTitle className="text-3xl">{totalLessons}</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
+      <motion.dl
+        initial="hidden"
+        animate="show"
+        variants={stagger}
+        className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4"
+      >
+        {[
+          [
+            courses.length,
+            plural(courses.length, "course").split(" ")[1],
+            `${live} live · ${courses.length - live} draft`,
+          ],
+          [learners, "learners", "across all your courses"],
+          [
+            courses.reduce((s, c) => s + c._count.lessons, 0),
+            "lessons",
+            formatDuration(courses.reduce((s, c) => s + c.totalDuration, 0)) +
+              " of video",
+          ],
+          [
+            rating ? rating.toFixed(1) : "–",
+            "average rating",
+            plural(reviews, "review"),
+          ],
+        ].map(([value, label, sub]) => (
+          <motion.div
+            key={label as string}
+            variants={rise}
+            className="bg-card p-5"
+          >
+            <dd className="font-display text-[44px] leading-none tabular-nums">
+              {value}
+            </dd>
+            <dt className="mt-1 text-[14px] font-medium">{label}</dt>
+            <p className="mt-0.5 text-[12.5px] text-muted-foreground">{sub}</p>
+          </motion.div>
+        ))}
+      </motion.dl>
 
-      {/* Courses Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Courses</CardTitle>
-          <CardDescription>
-            Manage and edit your courses
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {courses.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  className="w-12 h-12 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+      {courses.length === 0 ? (
+        <div className="mt-10 rounded-2xl border border-dashed border-border py-16 text-center">
+          <p className="font-display text-[30px]">Nothing on your shelf yet</p>
+          <p className="mt-2 text-muted-foreground">
+            Start a course, add lectures from YouTube, then publish it.
+          </p>
+          <Link href="/instructor/courses/new">
+            <Button className="mt-6 rounded-full">
+              Create your first course
+            </Button>
+          </Link>
+        </div>
+      ) : (
+        <motion.ul
+          initial="hidden"
+          animate="show"
+          variants={stagger}
+          className="mt-10 grid gap-5 md:grid-cols-2"
+        >
+          {courses.map((c) => {
+            const colors = coverColors(c.category);
+            const isLive = c.status === "PUBLISHED";
+            return (
+              <motion.li
+                key={c.id}
+                variants={rise}
+                whileHover={{ y: -4 }}
+                transition={{ type: "spring", stiffness: 320, damping: 26 }}
+                className="flex overflow-hidden rounded-2xl border border-border bg-card"
+              >
+                <div
+                  className="relative flex w-28 shrink-0 flex-col justify-end p-3 sm:w-36"
+                  style={{ background: colors.bg, color: colors.ink }}
+                  aria-hidden
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                  <div
+                    className="absolute inset-0 opacity-[0.12]"
+                    style={{
+                      backgroundImage:
+                        "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 7px)",
+                    }}
                   />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">No courses yet</h3>
-              <p className="text-gray-600 mb-4">
-                Create your first course to start teaching
-              </p>
-              <Link href="/instructor/courses/new">
-                <Button>Create Your First Course</Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4">Course</th>
-                    <th className="text-left py-3 px-4">Category</th>
-                    <th className="text-left py-3 px-4">Price</th>
-                    <th className="text-left py-3 px-4">Students</th>
-                    <th className="text-left py-3 px-4">Lessons</th>
-                    <th className="text-left py-3 px-4">Status</th>
-                    <th className="text-left py-3 px-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {courses.map((course) => (
-                    <tr key={course.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                            {course.thumbnail ? (
-                              <img
-                                src={course.thumbnail}
-                                alt={course.title}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-                                <span className="text-white font-bold">
-                                  {course.title.charAt(0)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <span className="font-medium line-clamp-1">
-                            {course.title}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge variant="secondary">{course.category}</Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        {course.price === 0 ? "Free" : `$${course.price}`}
-                      </td>
-                      <td className="py-3 px-4">{course._count.enrollments}</td>
-                      <td className="py-3 px-4">{course._count.lessons}</td>
-                      <td className="py-3 px-4">{getStatusBadge(course.status)}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <Link href={`/instructor/courses/${course.id}`}>
-                            <Button variant="outline" size="sm">
-                              Edit
-                            </Button>
-                          </Link>
-                          <Link href={`/courses/${course.id}`}>
-                            <Button variant="ghost" size="sm">
-                              View
-                            </Button>
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  <span
+                    className="relative mb-2 h-[3px] w-6 rounded-full"
+                    style={{ background: colors.rule }}
+                  />
+                  <span className="relative line-clamp-3 font-display text-[17px] leading-[1.05]">
+                    {c.title}
+                  </span>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-[12.5px] text-muted-foreground">
+                      {c.category ?? "Uncategorised"} · {levelLabel(c.level)}
+                    </p>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-semibold",
+                        isLive
+                          ? "bg-highlight text-ink"
+                          : "bg-secondary text-muted-foreground",
+                      )}
+                    >
+                      {isLive ? "Live" : "Draft"}
+                    </span>
+                  </div>
+                  <h2 className="mt-1 text-[17px] leading-snug font-semibold">
+                    {c.title}
+                  </h2>
+                  <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+                    <span>{plural(c._count.lessons, "lesson")}</span>
+                    <span>{plural(c._count.enrollments, "learner")}</span>
+                    {c.avgRating > 0 && (
+                      <span className="inline-flex items-center gap-1 text-ink">
+                        <Star className="size-3.5 fill-[#e0a400] text-[#e0a400]" />
+                        {c.avgRating.toFixed(1)}
+                      </span>
+                    )}
+                  </p>
+                  <div className="mt-auto flex gap-2 pt-5">
+                    <Link href={`/instructor/courses/${c.id}`}>
+                      <Button size="sm" className="rounded-full">
+                        <PenLine /> Edit
+                      </Button>
+                    </Link>
+                    <Link href={`/courses/${c.id}`}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full"
+                      >
+                        View <ArrowUpRight className="rtl:-scale-x-100" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </motion.li>
+            );
+          })}
+        </motion.ul>
+      )}
     </div>
   );
 }

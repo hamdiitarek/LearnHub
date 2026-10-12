@@ -105,12 +105,48 @@ export async function GET() {
       _avg: { rating: true },
     });
 
+    // Every course, drafts included, for the catalogue table
+    const courses = await db.course.findMany({
+      select: {
+        id: true,
+        title: true,
+        category: true,
+        level: true,
+        status: true,
+        updatedAt: true,
+        instructor: { select: { name: true } },
+        reviews: { select: { rating: true } },
+        _count: { select: { lessons: true, enrollments: true, certificates: true } },
+      },
+      orderBy: [{ status: "desc" }, { title: "asc" }],
+    });
+
+    // Enrolments per week for the last 12 weeks (oldest first)
+    const WEEKS = 12;
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const since = new Date(now - WEEKS * weekMs);
+    const recent = await db.enrollment.findMany({
+      where: { enrolledAt: { gte: since } },
+      select: { enrolledAt: true, completedAt: true },
+    });
+    const enrollmentsByWeek = Array.from({ length: WEEKS }, (_, i) => ({
+      weekStart: new Date(since.getTime() + i * weekMs).toISOString(),
+      enrollments: 0,
+    }));
+    for (const e of recent) {
+      const i = Math.min(WEEKS - 1, Math.floor((e.enrolledAt.getTime() - since.getTime()) / weekMs));
+      enrollmentsByWeek[i].enrollments++;
+    }
+    const completedEnrollments = await db.enrollment.count({ where: { completedAt: { not: null } } });
+
     return NextResponse.json({
       stats: {
         users: {
           total: totalUsers,
           students: totalStudents,
           instructors: totalInstructors,
+          admins: totalUsers - totalStudents - totalInstructors,
         },
         courses: {
           total: totalCourses,
@@ -118,6 +154,7 @@ export async function GET() {
           draft: totalCourses - publishedCourses,
         },
         enrollments: totalEnrollments,
+        completedEnrollments,
         lessons: totalLessons,
         reviews: totalReviews,
         certificates: totalCertificates,
@@ -129,6 +166,11 @@ export async function GET() {
         enrollments: recentEnrollments,
       },
       popularCourses,
+      enrollmentsByWeek,
+      courses: courses.map(({ reviews, ...c }) => ({
+        ...c,
+        avgRating: reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0,
+      })),
     });
   } catch (error) {
     console.error("Get stats error:", error);
